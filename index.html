@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thikaana Ops</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg:#f4f5f9; --card:#ffffff; --border:#e3e5ec; --text:#1d2030; --muted:#6b7080;
+    --sidebar:#171a2b; --sidebar-text:#c7c9db; --sidebar-active:#2a2f4a;
+    --accent:#4f46e5; --accent-hover:#4338ca; --accent-soft:#eef0fe;
+    --danger:#e0393e; --danger-soft:#fdeaea; --success:#16a34a; --success-soft:#e9f8ee;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ---------- Login ---------- */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#171a2b,#2a2f6a);}
+  .login-box{background:var(--card);padding:40px 36px;border-radius:16px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:center;}
+  .logo-badge{width:56px;height:56px;border-radius:14px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;margin:0 auto 14px;}
+  .login-box h1{font-size:20px;margin:0 0 4px;}
+  .login-box p.sub{color:var(--muted);font-size:13px;margin:0 0 24px;}
+  .login-box input{width:100%;padding:11px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;}
+  .login-box button{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;margin-top:6px;}
+  .login-box button:hover{background:var(--accent-hover);}
+  #login-error{color:var(--danger);font-size:12.5px;min-height:18px;margin-top:2px;}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--sidebar);color:var(--sidebar-text);flex-shrink:0;display:flex;flex-direction:column;padding:18px 12px;}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 20px;}
+  .sidebar .brand .logo-badge{width:34px;height:34px;font-size:15px;border-radius:9px;margin:0;}
+  .sidebar .brand b{color:#fff;font-size:15px;}
+  .sidebar .brand span{display:block;font-size:10.5px;color:#9497b3;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--sidebar-text);font-size:13.5px;cursor:pointer;margin-bottom:2px;user-select:none;}
+  .nav-item:hover{background:#20233c;}
+  .nav-item.active{background:var(--sidebar-active);color:#fff;font-weight:600;}
+  .nav-item .ic{width:18px;text-align:center;}
+  .sidebar-footer{margin-top:auto;padding:10px 8px 4px;border-top:1px solid #262a44;}
+  .sidebar-footer .who{font-size:12px;color:#9497b3;margin-bottom:8px;}
+  .sidebar-footer button{width:100%;padding:8px;background:#262a44;color:#fff;border:none;border-radius:7px;font-size:12.5px;}
+  .sidebar-footer button:hover{background:#31355a;}
+
+  .main{flex:1;padding:26px 32px;overflow-y:auto;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;}
+  .topbar h2{margin:0 0 2px;font-size:21px;}
+  .topbar p{margin:0;color:var(--muted);font-size:13px;}
+  .btn{padding:9px 16px;border-radius:8px;border:none;font-size:13.5px;font-weight:600;background:var(--accent);color:#fff;}
+  .btn:hover{background:var(--accent-hover);}
+  .btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border);}
+  .btn.secondary:hover{background:#f0f1f6;}
+  .btn.danger{background:var(--danger-soft);color:var(--danger);}
+  .btn.small{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+  /* ---------- Cards / stats ---------- */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+  .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .stat-card .value{font-size:22px;font-weight:700;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .card h3{margin:0 0 14px;font-size:14.5px;}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+  .toolbar input[type=text],.toolbar input[type=search],.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff;}
+  .toolbar .grow{flex:1;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:10px 10px;border-bottom:1px solid #eef0f5;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .empty-row{text-align:center;color:var(--muted);padding:30px !important;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .pill.gray{background:#eef0f5;color:#555a72;}
+  .pill.green{background:var(--success-soft);color:var(--success);}
+  .pill.red{background:var(--danger-soft);color:var(--danger);}
+  .pill.blue{background:var(--accent-soft);color:var(--accent);}
+  .pill.yellow{background:#fef6e0;color:#a5720b;}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 8px;font-size:12px;}
+  .icon-btn:hover{background:#f0f1f6;}
+  .pw-cell{display:flex;align-items:center;gap:6px;}
+
+  /* ---------- Modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,17,32,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:24px 26px;}
+  .modal h3{margin:0 0 16px;font-size:16px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#464a5c;margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:7px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .checkbox-group{display:flex;flex-wrap:wrap;gap:10px;}
+  .checkbox-group label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:7px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .action-item-row{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
+  .action-item-row input[type=text]{flex:2;}
+  .action-item-row input[type=date]{flex:1.2;}
+  .action-item-row select{flex:1;}
+  .action-item-row .icon-btn{flex:0;}
+
+  ::placeholder{color:#a7abbd;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo-badge">T</div>
+    <h1>Thikaana Ops</h1>
+    <p class="sub">Internal team dashboard — sign in to continue</p>
+    <input type="text" id="login-user" placeholder="Username" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button onclick="attemptLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand">
+        <div class="logo-badge">T</div>
+        <div><b>Thikaana</b><span>Ops Dashboard</span></div>
+      </div>
+      <div class="nav-item" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="ic">&#9679;</span> Dashboard</div>
+      <div class="nav-item" data-tab="vault" onclick="switchTab('vault')"><span class="ic">&#128274;</span> Credentials Vault</div>
+      <div class="nav-item" data-tab="expenses" onclick="switchTab('expenses')"><span class="ic">&#8377;</span> Expenses</div>
+      <div class="nav-item" data-tab="clients" onclick="switchTab('clients')"><span class="ic">&#128100;</span> Clients</div>
+      <div class="nav-item" data-tab="meetings" onclick="switchTab('meetings')"><span class="ic">&#128221;</span> Meeting Notes</div>
+      <div class="nav-item" data-tab="data" onclick="switchTab('data')"><span class="ic">&#128190;</span> Backup / Data</div>
+      <div class="sidebar-footer">
+        <div class="pill gray" id="sync-badge" style="margin-bottom:10px;">Local Only</div>
+        <button onclick="connectGoogle()" id="google-connect-btn" style="margin-bottom:6px;">Sign in with Google</button>
+        <button onclick="refreshData()" style="margin-bottom:6px;">↻ Refresh Data</button>
+        <div class="who">Signed in as <b>admin</b></div>
+        <button onclick="logout()">Log Out</button>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+/* ---------------- Config ---------------- */
+const AUTH = { username: "admin", password: "12345" };
+const TEAM = [
+  { name: "Ankit", role: "Founder" },
+  { name: "Chandan", role: "Chief Technology Officer" },
+  { name: "Bhuvanesh", role: "Director – Client Relations" },
+  { name: "Irfan", role: "Director – Customer Success" }
+];
+const VAULT_CATEGORIES = ["Domain & Hosting","Google Workspace","Social Media","Banking & Payments","Software & Tools","Email","Other"];
+const EXPENSE_CATEGORIES = ["Software & Subscriptions","Marketing & Ads","Office & Admin","Travel","Salaries & Contractors","Client Project Cost","Domain & Hosting","Other"];
+const CLIENT_STATUSES = ["Lead","Active","On Hold","Completed","Lost"];
+
+/* Google Sheets backend (direct browser sign-in, no Apps Script). Leave clientId blank to run local-only. */
+const GOOGLE_CONFIG = {
+  clientId: "130457037470-grgsasj7anjaen6sajiojku89grd2tpm.apps.googleusercontent.com",
+  spreadsheetId: "1WDqVIIYMS2HuEjiO5H8TRqbQ7CLXJt_Tznxo9p2XCmQ",
+  scope: "https://www.googleapis.com/auth/spreadsheets"
+};
+const SHEET_COLUMNS = {
+  vault: ["id","service","category","username","password","url","notes","updatedAt"],
+  expenses: ["id","date","category","description","amount","paidBy","notes"],
+  clients: ["id","name","company","email","phone","status","project","value","notes","addedBy","addedAt"],
+  meetings: ["id","date","topic","attendees","notes","decisions","actionItems"]
+};
+
+const KEYS = ["vault","expenses","clients","meetings"];
+const LOCAL_CACHE_PREFIX = "thikaana_";
+let store = { vault: [], expenses: [], clients: [], meetings: [] };
+let syncStatus = "local"; // local | not_connected | syncing | synced | offline
+let accessToken = sessionStorage.getItem("thikaana_gtoken") || null;
+let tokenClient = null;
+let sheetsChecked = false;
+
+/* ---------------- Local cache ---------------- */
+function loadLocalCache(key){ try{ return JSON.parse(localStorage.getItem(LOCAL_CACHE_PREFIX+key)) || []; }catch(e){ return []; } }
+function saveLocalCache(key, data){ localStorage.setItem(LOCAL_CACHE_PREFIX+key, JSON.stringify(data)); }
+
+/* ---------------- Google Sign-In ---------------- */
+function isGoogleConfigured(){ return !!GOOGLE_CONFIG.clientId; }
+function isRemoteEnabled(){ return isGoogleConfigured() && !!accessToken; }
+
+function initGoogleAuth(){
+  if(!isGoogleConfigured() || typeof google === "undefined") return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CONFIG.clientId,
+    scope: GOOGLE_CONFIG.scope,
+    callback: async (resp) => {
+      if(resp.error){ alert("Google sign-in failed: " + resp.error); return; }
+      accessToken = resp.access_token;
+      sessionStorage.setItem("thikaana_gtoken", accessToken);
+      sheetsChecked = false;
+      await refreshData();
+    }
+  });
+}
+function connectGoogle(){
+  if(!isGoogleConfigured()){ alert("Google Sheets isn't connected yet — ask Ankit to finish the setup."); return; }
+  if(!tokenClient){ alert("Still loading Google Sign-In, try again in a moment."); return; }
+  tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
+}
+function disconnectGoogle(){
+  accessToken = null; sessionStorage.removeItem("thikaana_gtoken");
+  syncStatus = "local"; updateSyncBadge();
+}
+window.addEventListener("load", () => setTimeout(initGoogleAuth, 300));
+
+/* ---------------- Sheets API ---------------- */
+function colLetter(n){ let s=""; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+function safeParse(s, fallback){ try{ return JSON.parse(s); }catch(e){ return fallback; } }
+
+async function sheetsFetch(url, opts){
+  opts = opts || {};
+  const res = await fetch(url, {
+    ...opts,
+    headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json", ...(opts.headers||{}) }
+  });
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){ throw new Error((data.error && data.error.message) || ("HTTP " + res.status)); }
+  return data;
+}
+
+async function ensureSheetsExist(){
+  if(sheetsChecked) return;
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}`;
+  const meta = await sheetsFetch(`${base}?fields=sheets.properties.title`);
+  const existing = (meta.sheets||[]).map(s=>s.properties.title);
+  const missing = KEYS.filter(k=>!existing.includes(k));
+  if(missing.length){
+    await sheetsFetch(`${base}:batchUpdate`, { method:"POST", body: JSON.stringify({ requests: missing.map(title=>({addSheet:{properties:{title}}})) }) });
+    for(const k of missing){
+      await sheetsFetch(`${base}/values/${k}!A1?valueInputOption=RAW`, { method:"PUT", body: JSON.stringify({ values:[SHEET_COLUMNS[k]] }) });
+    }
+  }
+  sheetsChecked = true;
+}
+
+async function fetchSheet(key){
+  const cols = SHEET_COLUMNS[key];
+  const range = `${key}!A2:${colLetter(cols.length)}`;
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}`;
+  const data = await sheetsFetch(`${base}/values/${encodeURIComponent(range)}`);
+  const rows = data.values || [];
+  return rows.filter(r=>r[0]).map(r=>{
+    const obj = {};
+    cols.forEach((c,i)=>{ obj[c] = r[i]!==undefined ? r[i] : ""; });
+    if(key==="meetings"){ obj.attendees = safeParse(obj.attendees, []); obj.actionItems = safeParse(obj.actionItems, []); }
+    return obj;
+  });
+}
+
+async function pushSheet(key, arr){
+  const cols = SHEET_COLUMNS[key];
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}`;
+  const rows = arr.map(rec => cols.map(c=>{
+    let v = rec[c];
+    if(key==="meetings" && (c==="attendees"||c==="actionItems")) v = JSON.stringify(v||[]);
+    return (v===undefined||v===null) ? "" : v;
+  }));
+  const clearRange = `${key}!A1:${colLetter(cols.length)}${Math.max(rows.length+1, 500)}`;
+  await sheetsFetch(`${base}/values/${encodeURIComponent(clearRange)}:clear`, { method:"POST" });
+  await sheetsFetch(`${base}/values/${key}!A1?valueInputOption=RAW`, { method:"PUT", body: JSON.stringify({ values:[cols, ...rows] }) });
+}
+
+async function initStore(){
+  if(isRemoteEnabled()){
+    syncStatus = "syncing"; updateSyncBadge();
+    try{
+      await ensureSheetsExist();
+      const results = await Promise.all(KEYS.map(fetchSheet));
+      KEYS.forEach((k,i) => { store[k] = results[i]; saveLocalCache(k, results[i]); });
+      syncStatus = "synced";
+    }catch(err){
+      KEYS.forEach(k => store[k] = loadLocalCache(k));
+      syncStatus = "offline";
+      if(String(err.message||"").match(/401|unauthenticated|invalid/i)) disconnectGoogle();
+    }
+  } else {
+    KEYS.forEach(k => store[k] = loadLocalCache(k));
+    syncStatus = isGoogleConfigured() ? "not_connected" : "local";
+  }
+  updateSyncBadge();
+}
+
+function updateSyncBadge(){
+  const el = document.getElementById("sync-badge");
+  const btn = document.getElementById("google-connect-btn");
+  if(btn) btn.style.display = isGoogleConfigured() ? "block" : "none";
+  if(!el) return;
+  const map = {
+    local: ["Local Only", "gray"],
+    not_connected: ["Not Signed In", "yellow"],
+    synced: ["Synced with Google Sheets", "green"],
+    syncing: ["Syncing…", "yellow"],
+    offline: ["Offline — showing cached data", "red"]
+  };
+  const [label, cls] = map[syncStatus];
+  el.textContent = label;
+  el.className = "pill " + cls;
+}
+
+function getData(key){ return store[key]; }
+function setData(key, arr){
+  store[key] = arr;
+  saveLocalCache(key, arr);
+  if(isRemoteEnabled()){
+    syncStatus = "syncing"; updateSyncBadge();
+    pushSheet(key, arr).then(()=>{ syncStatus = "synced"; updateSyncBadge(); })
+      .catch(()=>{ syncStatus = "offline"; updateSyncBadge(); });
+  }
+}
+async function refreshData(){ await initStore(); switchTab(currentTab); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function fmtMoney(n){ return "₹" + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2}); }
+function fmtDate(d){ if(!d) return "—"; const dt=new Date(d+"T00:00:00"); if(isNaN(dt)) return d; return dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}); }
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function teamOptions(selected){ return TEAM.map(t=>`<option value="${t.name}" ${t.name===selected?"selected":""}>${t.name} (${t.role})</option>`).join(""); }
+
+/* ---------------- Auth ---------------- */
+function attemptLogin(){
+  const u = document.getElementById("login-user").value.trim();
+  const p = document.getElementById("login-pass").value;
+  if(u === AUTH.username && p === AUTH.password){
+    sessionStorage.setItem("thikaana_session","1");
+    showApp();
+  } else {
+    document.getElementById("login-error").textContent = "Incorrect username or password.";
+  }
+}
+document.getElementById("login-pass").addEventListener("keydown", e => { if(e.key==="Enter") attemptLogin(); });
+document.getElementById("login-user").addEventListener("keydown", e => { if(e.key==="Enter") attemptLogin(); });
+
+function logout(){
+  sessionStorage.removeItem("thikaana_session");
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("login-user").value=""; document.getElementById("login-pass").value="";
+}
+async function showApp(){
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("main-content").innerHTML = `<p style="padding:40px;color:var(--muted);">Loading data…</p>`;
+  await initStore();
+  switchTab("dashboard");
+}
+if(sessionStorage.getItem("thikaana_session") === "1"){ showApp(); }
+
+/* ---------------- Tabs ---------------- */
+let currentTab = "dashboard";
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===tab));
+  const renderers = { dashboard:renderDashboard, vault:renderVault, expenses:renderExpenses, clients:renderClients, meetings:renderMeetings, data:renderData };
+  renderers[tab]();
+}
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(html){ document.getElementById("modal-body").innerHTML = html; document.getElementById("overlay").classList.add("open"); }
+function closeModal(){ document.getElementById("overlay").classList.remove("open"); document.getElementById("modal-body").innerHTML=""; }
+document.getElementById("overlay").addEventListener("click", e => { if(e.target.id==="overlay") closeModal(); });
+
+/* ================= DASHBOARD ================= */
+function renderDashboard(){
+  const vault = getData('vault'), expenses = getData('expenses'), clients = getData('clients'), meetings = getData('meetings');
+  const now = new Date(); const ym = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  const monthTotal = expenses.filter(e=>e.date && e.date.startsWith(ym)).reduce((s,e)=>s+Number(e.amount||0),0);
+  const activeClients = clients.filter(c=>c.status==="Active").length;
+  const lastMeeting = meetings.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""))[0];
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Dashboard</h2><p>Overview across Thikaana operations</p></div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Saved Credentials</div><div class="value">${vault.length}</div></div>
+      <div class="stat-card"><div class="label">Spend This Month</div><div class="value">${fmtMoney(monthTotal)}</div></div>
+      <div class="stat-card"><div class="label">Active Clients</div><div class="value">${activeClients} <span style="font-size:12px;color:var(--muted);font-weight:400;">/ ${clients.length} total</span></div></div>
+      <div class="stat-card"><div class="label">Meetings Logged</div><div class="value">${meetings.length}</div></div>
+    </div>
+    <div class="card">
+      <h3>Team</h3>
+      <table><thead><tr><th>Name</th><th>Designation</th></tr></thead><tbody>
+        ${TEAM.map(t=>`<tr><td><b>${t.name}</b></td><td>${t.role}</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="card">
+      <h3>Most Recent Meeting</h3>
+      ${lastMeeting ? `<p style="margin:0 0 4px;"><b>${escapeHtml(lastMeeting.topic||"Untitled")}</b> — ${fmtDate(lastMeeting.date)}</p><p style="margin:0;color:var(--muted);font-size:13px;">${escapeHtml((lastMeeting.notes||"").slice(0,160))}${(lastMeeting.notes||"").length>160?"…":""}</p>` : `<p style="color:var(--muted);margin:0;">No meetings logged yet.</p>`}
+    </div>
+  `;
+}
+
+/* ================= VAULT ================= */
+function renderVault(){
+  const items = getData('vault');
+  const search = (document.getElementById("vault-search")?.value || "").toLowerCase();
+  const filtered = items.filter(i => !search || (i.service+i.username+i.category).toLowerCase().includes(search));
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Credentials Vault</h2><p>All logins used across the business. Visible to admins only.</p></div>
+      <button class="btn" onclick="openVaultForm()">+ Add Credential</button>
+    </div>
+    <div class="toolbar"><input type="search" id="vault-search" placeholder="Search by service, category or username..." class="grow" oninput="renderVault()"></div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Service</th><th>Category</th><th>Username / Email</th><th>Password</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(i => `
+          <tr>
+            <td><b>${escapeHtml(i.service)}</b>${i.url?`<br><a href="${escapeHtml(i.url)}" target="_blank" style="font-size:11.5px;color:var(--accent);">${escapeHtml(i.url)}</a>`:""}</td>
+            <td><span class="pill blue">${escapeHtml(i.category)}</span></td>
+            <td>${escapeHtml(i.username)}</td>
+            <td>
+              <div class="pw-cell">
+                <span class="mono" id="pw-${i.id}" data-pw="${escapeHtml(i.password)}">••••••••</span>
+                <button class="icon-btn" onclick="togglePw('${i.id}')">Show</button>
+                <button class="icon-btn" onclick="copyPw('${i.id}')">Copy</button>
+              </div>
+            </td>
+            <td style="max-width:160px;color:var(--muted);font-size:12.5px;">${escapeHtml(i.notes||"—")}</td>
+            <td class="row-actions">
+              <button class="icon-btn" onclick="openVaultForm('${i.id}')">Edit</button>
+              <button class="icon-btn" onclick="deleteItem('vault','${i.id}')">Delete</button>
+            </td>
+          </tr>`).join("") : `<tr><td colspan="6" class="empty-row">No credentials saved yet. Click "Add Credential" to start.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function togglePw(id){
+  const el = document.getElementById("pw-"+id);
+  const btn = el.nextElementSibling;
+  if(el.textContent.includes("•")){ el.textContent = el.dataset.pw; btn.textContent="Hide"; }
+  else { el.textContent = "••••••••"; btn.textContent="Show"; }
+}
+function copyPw(id){
+  const pw = document.getElementById("pw-"+id).dataset.pw;
+  const ta = document.createElement("textarea"); ta.value = pw; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta);
+}
+function openVaultForm(id){
+  const items = getData('vault');
+  const item = items.find(i=>i.id===id) || {};
+  openModal(`
+    <h3>${id?"Edit":"Add"} Credential</h3>
+    <div class="field"><label>Service / Account Name *</label><input type="text" id="f-service" value="${escapeHtml(item.service||"")}" placeholder="e.g. GoDaddy, Google Workspace Admin"></div>
+    <div class="field-row">
+      <div class="field"><label>Category</label><select id="f-category">${VAULT_CATEGORIES.map(c=>`<option ${c===item.category?"selected":""}>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>Website / URL</label><input type="text" id="f-url" value="${escapeHtml(item.url||"")}" placeholder="https://..."></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Username / Email *</label><input type="text" id="f-username" value="${escapeHtml(item.username||"")}"></div>
+      <div class="field"><label>Password *</label><input type="text" id="f-password" value="${escapeHtml(item.password||"")}"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveVault('${id||""}')">Save</button></div>
+  `);
+}
+function saveVault(id){
+  const service = document.getElementById("f-service").value.trim();
+  const username = document.getElementById("f-username").value.trim();
+  const password = document.getElementById("f-password").value;
+  if(!service || !username || !password){ alert("Service, username and password are required."); return; }
+  const items = getData('vault');
+  const record = {
+    id: id || uid(), service, username, password,
+    category: document.getElementById("f-category").value,
+    url: document.getElementById("f-url").value.trim(),
+    notes: document.getElementById("f-notes").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  setData('vault', items);
+  closeModal(); renderVault();
+}
+
+/* ================= EXPENSES ================= */
+function renderExpenses(){
+  const items = getData('expenses').slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  const monthFilter = document.getElementById("exp-month")?.value || "";
+  const filtered = monthFilter ? items.filter(e=>e.date && e.date.startsWith(monthFilter)) : items;
+  const total = filtered.reduce((s,e)=>s+Number(e.amount||0),0);
+
+  const byCategory = {};
+  filtered.forEach(e => { byCategory[e.category] = (byCategory[e.category]||0) + Number(e.amount||0); });
+  const catRows = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Expenses</h2><p>Track company spending across categories</p></div>
+      <button class="btn" onclick="openExpenseForm()">+ Add Expense</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total ${monthFilter?("for "+monthFilter):"(all time)"}</div><div class="value">${fmtMoney(total)}</div></div>
+      <div class="stat-card"><div class="label">Entries</div><div class="value">${filtered.length}</div></div>
+    </div>
+    ${catRows.length ? `<div class="card"><h3>By Category</h3>${catRows.map(([c,v])=>`
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f0f1f5;">
+        <span>${escapeHtml(c)}</span><b>${fmtMoney(v)}</b>
+      </div>`).join("")}</div>` : ""}
+    <div class="toolbar">
+      <label style="font-size:12.5px;color:var(--muted);">Filter month:</label>
+      <input type="month" id="exp-month" value="${monthFilter}" onchange="renderExpenses()">
+      ${monthFilter?`<button class="btn secondary small" onclick="document.getElementById('exp-month').value='';renderExpenses();">Clear</button>`:""}
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid By</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(e => `
+          <tr>
+            <td>${fmtDate(e.date)}</td>
+            <td><span class="pill gray">${escapeHtml(e.category)}</span></td>
+            <td>${escapeHtml(e.description)}${e.notes?`<br><span style="color:var(--muted);font-size:12px;">${escapeHtml(e.notes)}</span>`:""}</td>
+            <td><b>${fmtMoney(e.amount)}</b></td>
+            <td>${escapeHtml(e.paidBy||"—")}</td>
+            <td class="row-actions">
+              <button class="icon-btn" onclick="openExpenseForm('${e.id}')">Edit</button>
+              <button class="icon-btn" onclick="deleteItem('expenses','${e.id}')">Delete</button>
+            </td>
+          </tr>`).join("") : `<tr><td colspan="6" class="empty-row">No expenses recorded yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function openExpenseForm(id){
+  const items = getData('expenses');
+  const item = items.find(i=>i.id===id) || { date: new Date().toISOString().slice(0,10) };
+  openModal(`
+    <h3>${id?"Edit":"Add"} Expense</h3>
+    <div class="field-row">
+      <div class="field"><label>Date *</label><input type="date" id="f-date" value="${item.date||""}"></div>
+      <div class="field"><label>Amount (₹) *</label><input type="number" id="f-amount" value="${item.amount||""}" min="0" step="0.01"></div>
+    </div>
+    <div class="field"><label>Category</label><select id="f-category">${EXPENSE_CATEGORIES.map(c=>`<option ${c===item.category?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="field"><label>Description *</label><input type="text" id="f-description" value="${escapeHtml(item.description||"")}" placeholder="What was this for?"></div>
+    <div class="field"><label>Paid By</label><select id="f-paidby"><option value="">—</option>${teamOptions(item.paidBy)}</select></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveExpense('${id||""}')">Save</button></div>
+  `);
+}
+function saveExpense(id){
+  const date = document.getElementById("f-date").value;
+  const amount = document.getElementById("f-amount").value;
+  const description = document.getElementById("f-description").value.trim();
+  if(!date || !amount || !description){ alert("Date, amount and description are required."); return; }
+  const items = getData('expenses');
+  const record = {
+    id: id || uid(), date, amount: Number(amount), description,
+    category: document.getElementById("f-category").value,
+    paidBy: document.getElementById("f-paidby").value,
+    notes: document.getElementById("f-notes").value.trim()
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  setData('expenses', items);
+  closeModal(); renderExpenses();
+}
+
+/* ================= CLIENTS ================= */
+function statusPillClass(s){ return {Active:"green",Lead:"blue",Completed:"gray","On Hold":"yellow",Lost:"red"}[s] || "gray"; }
+function renderClients(){
+  const items = getData('clients');
+  const search = (document.getElementById("client-search")?.value || "").toLowerCase();
+  const statusFilter = document.getElementById("client-status")?.value || "";
+  const filtered = items.filter(c => (!search || (c.name+c.company+c.project).toLowerCase().includes(search)) && (!statusFilter || c.status===statusFilter));
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Clients</h2><p>All client / project relationships</p></div>
+      <button class="btn" onclick="openClientForm()">+ Add Client</button>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="client-search" placeholder="Search by name, company or project..." class="grow" oninput="renderClients()">
+      <select id="client-status" onchange="renderClients()"><option value="">All statuses</option>${CLIENT_STATUSES.map(s=>`<option ${s===statusFilter?"selected":""}>${s}</option>`).join("")}</select>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Client / Company</th><th>Contact</th><th>Status</th><th>Project</th><th>Value</th><th>Owner</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(c => `
+          <tr>
+            <td><b>${escapeHtml(c.name)}</b>${c.company?`<br><span style="color:var(--muted);font-size:12px;">${escapeHtml(c.company)}</span>`:""}</td>
+            <td>${escapeHtml(c.email||"—")}${c.phone?`<br>${escapeHtml(c.phone)}`:""}</td>
+            <td><span class="pill ${statusPillClass(c.status)}">${escapeHtml(c.status)}</span></td>
+            <td>${escapeHtml(c.project||"—")}</td>
+            <td>${c.value?fmtMoney(c.value):"—"}</td>
+            <td>${escapeHtml(c.addedBy||"—")}</td>
+            <td class="row-actions">
+              <button class="icon-btn" onclick="openClientForm('${c.id}')">Edit</button>
+              <button class="icon-btn" onclick="deleteItem('clients','${c.id}')">Delete</button>
+            </td>
+          </tr>`).join("") : `<tr><td colspan="7" class="empty-row">No clients added yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function openClientForm(id){
+  const items = getData('clients');
+  const item = items.find(i=>i.id===id) || { addedAt: new Date().toISOString().slice(0,10) };
+  openModal(`
+    <h3>${id?"Edit":"Add"} Client</h3>
+    <div class="field-row">
+      <div class="field"><label>Client Name *</label><input type="text" id="f-name" value="${escapeHtml(item.name||"")}"></div>
+      <div class="field"><label>Company</label><input type="text" id="f-company" value="${escapeHtml(item.company||"")}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Email</label><input type="text" id="f-email" value="${escapeHtml(item.email||"")}"></div>
+      <div class="field"><label>Phone</label><input type="text" id="f-phone" value="${escapeHtml(item.phone||"")}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Status</label><select id="f-status">${CLIENT_STATUSES.map(s=>`<option ${s===item.status?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="field"><label>Deal Value (₹)</label><input type="number" id="f-value" value="${item.value||""}" min="0"></div>
+    </div>
+    <div class="field"><label>Project / Service</label><input type="text" id="f-project" value="${escapeHtml(item.project||"")}"></div>
+    <div class="field"><label>Relationship Owner</label><select id="f-addedby"><option value="">—</option>${teamOptions(item.addedBy)}</select></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveClient('${id||""}')">Save</button></div>
+  `);
+}
+function saveClient(id){
+  const name = document.getElementById("f-name").value.trim();
+  if(!name){ alert("Client name is required."); return; }
+  const items = getData('clients');
+  const existing = items.find(i=>i.id===id);
+  const record = {
+    id: id || uid(), name,
+    company: document.getElementById("f-company").value.trim(),
+    email: document.getElementById("f-email").value.trim(),
+    phone: document.getElementById("f-phone").value.trim(),
+    status: document.getElementById("f-status").value,
+    value: document.getElementById("f-value").value,
+    project: document.getElementById("f-project").value.trim(),
+    addedBy: document.getElementById("f-addedby").value,
+    notes: document.getElementById("f-notes").value.trim(),
+    addedAt: existing ? existing.addedAt : new Date().toISOString().slice(0,10)
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  setData('clients', items);
+  closeModal(); renderClients();
+}
+
+/* ================= MEETING NOTES ================= */
+function renderMeetings(){
+  const items = getData('meetings').slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  const search = (document.getElementById("meeting-search")?.value || "").toLowerCase();
+  const filtered = items.filter(m => !search || (m.topic+m.notes).toLowerCase().includes(search));
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Meeting Notes</h2><p>Minutes, decisions and action items from internal discussions</p></div>
+      <button class="btn" onclick="openMeetingForm()">+ Log Meeting</button>
+    </div>
+    <div class="toolbar"><input type="search" id="meeting-search" placeholder="Search meetings..." class="grow" oninput="renderMeetings()"></div>
+    ${filtered.length ? filtered.map(m => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <h3 style="margin-bottom:4px;">${escapeHtml(m.topic||"Untitled Meeting")}</h3>
+            <p style="margin:0 0 10px;color:var(--muted);font-size:12.5px;">${fmtDate(m.date)} &nbsp;•&nbsp; ${(m.attendees||[]).map(escapeHtml).join(", ") || "No attendees listed"}</p>
+          </div>
+          <div class="row-actions">
+            <button class="icon-btn" onclick="openMeetingForm('${m.id}')">Edit</button>
+            <button class="icon-btn" onclick="deleteItem('meetings','${m.id}')">Delete</button>
+          </div>
+        </div>
+        ${m.notes?`<p style="font-size:13.5px;white-space:pre-wrap;margin:0 0 10px;"><b>Discussion:</b><br>${escapeHtml(m.notes)}</p>`:""}
+        ${m.decisions?`<p style="font-size:13.5px;white-space:pre-wrap;margin:0 0 10px;"><b>Decisions:</b><br>${escapeHtml(m.decisions)}</p>`:""}
+        ${(m.actionItems&&m.actionItems.length) ? `
+          <b style="font-size:13.5px;">Action Items:</b>
+          <table style="margin-top:6px;"><thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>
+            ${m.actionItems.map(a=>`<tr><td>${escapeHtml(a.task)}</td><td>${escapeHtml(a.owner||"—")}</td><td>${a.due?fmtDate(a.due):"—"}</td><td><span class="pill ${a.done?"green":"yellow"}">${a.done?"Done":"Pending"}</span></td></tr>`).join("")}
+          </tbody></table>` : ""}
+      </div>
+    `).join("") : `<div class="card"><p class="empty-row">No meetings logged yet. Click "Log Meeting" to add your first one.</p></div>`}
+  `;
+}
+let tempActionItems = [];
+function openMeetingForm(id){
+  const items = getData('meetings');
+  const item = items.find(i=>i.id===id) || { date: new Date().toISOString().slice(0,10), attendees: [], actionItems: [] };
+  tempActionItems = JSON.parse(JSON.stringify(item.actionItems || []));
+  openModal(`
+    <h3>${id?"Edit":"Log"} Meeting</h3>
+    <div class="field-row">
+      <div class="field"><label>Date *</label><input type="date" id="f-date" value="${item.date||""}"></div>
+      <div class="field"><label>Topic / Title *</label><input type="text" id="f-topic" value="${escapeHtml(item.topic||"")}" placeholder="e.g. Weekly Sync"></div>
+    </div>
+    <div class="field"><label>Attendees</label>
+      <div class="checkbox-group">
+        ${TEAM.map(t=>`<label><input type="checkbox" value="${t.name}" ${ (item.attendees||[]).includes(t.name) ? "checked":"" } class="attendee-check"> ${t.name}</label>`).join("")}
+      </div>
+    </div>
+    <div class="field"><label>Discussion Notes</label><textarea id="f-notes" placeholder="What was discussed...">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="field"><label>Decisions Made</label><textarea id="f-decisions" placeholder="What was decided...">${escapeHtml(item.decisions||"")}</textarea></div>
+    <div class="field">
+      <label>Action Items</label>
+      <div id="action-items-container"></div>
+      <button type="button" class="btn secondary small" onclick="addActionItemRow()">+ Add Action Item</button>
+    </div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveMeeting('${id||""}')">Save</button></div>
+  `);
+  renderActionItemRows();
+}
+function renderActionItemRows(){
+  const c = document.getElementById("action-items-container");
+  c.innerHTML = tempActionItems.map((a,idx)=>`
+    <div class="action-item-row">
+      <input type="text" placeholder="Task" value="${escapeHtml(a.task||"")}" onchange="tempActionItems[${idx}].task=this.value">
+      <select onchange="tempActionItems[${idx}].owner=this.value"><option value="">Owner</option>${teamOptions(a.owner)}</select>
+      <input type="date" value="${a.due||""}" onchange="tempActionItems[${idx}].due=this.value">
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;"><input type="checkbox" ${a.done?"checked":""} onchange="tempActionItems[${idx}].done=this.checked"> Done</label>
+      <button type="button" class="icon-btn" onclick="removeActionItemRow(${idx})">✕</button>
+    </div>
+  `).join("") || `<p style="color:var(--muted);font-size:12.5px;margin:4px 0;">No action items yet.</p>`;
+}
+function addActionItemRow(){ tempActionItems.push({task:"",owner:"",due:"",done:false}); renderActionItemRows(); }
+function removeActionItemRow(idx){ tempActionItems.splice(idx,1); renderActionItemRows(); }
+function saveMeeting(id){
+  const topic = document.getElementById("f-topic").value.trim();
+  const date = document.getElementById("f-date").value;
+  if(!topic || !date){ alert("Date and topic are required."); return; }
+  const attendees = Array.from(document.querySelectorAll(".attendee-check:checked")).map(el=>el.value);
+  const items = getData('meetings');
+  const record = {
+    id: id || uid(), date, topic, attendees,
+    notes: document.getElementById("f-notes").value.trim(),
+    decisions: document.getElementById("f-decisions").value.trim(),
+    actionItems: tempActionItems.filter(a=>a.task && a.task.trim())
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  setData('meetings', items);
+  closeModal(); renderMeetings();
+}
+
+/* ================= DELETE (shared) ================= */
+function deleteItem(key, id){
+  if(!confirm("Delete this entry? This cannot be undone.")) return;
+  setData(key, getData(key).filter(i=>i.id!==id));
+  ({vault:renderVault, expenses:renderExpenses, clients:renderClients, meetings:renderMeetings})[key]();
+}
+
+/* ================= BACKUP / DATA ================= */
+function renderData(){
+  const vault = getData('vault'), expenses = getData('expenses'), clients = getData('clients'), meetings = getData('meetings');
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Backup / Data</h2><p>${isRemoteEnabled() ? "Synced with your Google Sheet — export still recommended as an offline copy." : "Everything here lives only in this browser. Export regularly so you don't lose it."}</p></div></div>
+    <div class="card">
+      <h3>Connection</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 10px;">${isRemoteEnabled() ? "This tool is configured to read and write to your Google Sheet." : "Not connected to Google Sheets yet — running in local browser storage only."}</p>
+      <button class="btn secondary" onclick="refreshData()">↻ Refresh from Google Sheets</button>
+    </div>
+    <div class="card">
+      <h3>Export Backup</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">Downloads a single JSON file with all Vault, Expenses, Clients and Meeting data (${vault.length} credentials, ${expenses.length} expenses, ${clients.length} clients, ${meetings.length} meetings).</p>
+      <button class="btn" onclick="exportData()">Download Backup (.json)</button>
+    </div>
+    <div class="card">
+      <h3>Import Backup</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">Restores data from a previously exported file. This will <b>replace</b> all current data${isRemoteEnabled()?" (and overwrite the Google Sheet)":""}.</p>
+      <input type="file" id="import-file" accept="application/json">
+      <br><br>
+      <button class="btn secondary" onclick="importData()">Restore from File</button>
+    </div>
+    <div class="card">
+      <h3>Danger Zone</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">Permanently erase all data${isRemoteEnabled()?" (including the Google Sheet)":" stored in this browser"}.</p>
+      <button class="btn danger" onclick="wipeData()">Erase All Data</button>
+    </div>
+  `;
+}
+function exportData(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    vault: getData('vault'), expenses: getData('expenses'),
+    clients: getData('clients'), meetings: getData('meetings')
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `thikaana-ops-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importData(){
+  const fileInput = document.getElementById("import-file");
+  const file = fileInput.files[0];
+  if(!file){ alert("Choose a backup file first."); return; }
+  if(!confirm("This will replace all current data with the contents of this file. Continue?")) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      setData('vault', data.vault || []);
+      setData('expenses', data.expenses || []);
+      setData('clients', data.clients || []);
+      setData('meetings', data.meetings || []);
+      alert("Backup restored successfully.");
+      renderData();
+    }catch(err){ alert("Could not read this file. Make sure it's a valid Thikaana Ops backup."); }
+  };
+  reader.readAsText(file);
+}
+function wipeData(){
+  if(!confirm("This will permanently delete ALL data (vault, expenses, clients, meetings). This cannot be undone. Continue?")) return;
+  if(!confirm("Are you absolutely sure? Consider exporting a backup first.")) return;
+  KEYS.forEach(k => setData(k, []));
+  renderData();
+}
+</script>
+</body>
+</html>
