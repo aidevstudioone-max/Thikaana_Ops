@@ -174,11 +174,43 @@
   .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--success);margin-right:6px;}
 
   ::placeholder{color:#a7abbd;}
+
+  /* ---- v2 additions: presence, status boxes, clickable stats, animations ---- */
+  .presence-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;position:relative;top:-1px;}
+  .presence-dot.glow{animation:presencePulse 2s infinite;}
+  @keyframes presencePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55);}70%{box-shadow:0 0 0 7px rgba(22,163,74,0);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
+  .presence-select{background:#171a2b;color:#fff;border:1px solid #33375a;border-radius:6px;padding:5px 6px;font-size:11.5px;width:100%;}
+
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px;}
+  .status-box{border-radius:var(--radius);padding:14px;text-align:center;border:1.5px solid transparent;transition:transform .15s ease,box-shadow .15s ease;}
+  .status-box .num{font-size:22px;font-weight:800;}
+  .status-box .lbl{font-size:11px;font-weight:600;margin-top:2px;}
+
+  .stat-card{transition:transform .15s ease,box-shadow .15s ease;}
+  .stat-card.clickable:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(24,30,60,.08);}
+  .card{transition:box-shadow .15s ease;}
+  .priority-card{transition:transform .15s ease;}
+  .priority-card:hover{transform:translateY(-2px);}
+
+  .stat-card.accent{border-top:3px solid var(--accent);}
+  .stat-card.accent-danger{border-top:3px solid var(--danger);}
+  .stat-card.accent-success{border-top:3px solid var(--success);}
+  .stat-card.accent-warn{border-top:3px solid var(--warn);}
+  .stat-card.accent-gray{border-top:3px solid #9aa0b4;}
+
+  #impersonation-banner{display:none;background:#3d2c00;color:#ffcf70;font-size:12.5px;padding:8px 16px;text-align:center;}
+  #package-landing{display:none;background:var(--bg);min-height:100vh;}
+  .other-pkg-card{cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;}
+  .other-pkg-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(24,30,60,.08);border-color:var(--accent);}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 </head>
 <body>
 
 <div id="demo-banner">DEMO MODE — dummy data only, nothing here is connected to a real database yet. Login: <b>support@thikaana.co</b> / <b>demo123</b> (Thikaana team) — client demo logins shown on the login screen.</div>
+<div id="impersonation-banner"></div>
+
+<div id="package-landing"></div>
 
 <div id="login-screen">
   <div class="login-box">
@@ -210,12 +242,29 @@ const BRAND = "ठिkaana";
 const SHARED_LOGIN = { email: "support@thikaana.co", password: "demo123" };
 const DEMO_PASSWORD = "demo123";
 
-const EMPLOYEES = [
+const SEED_EMPLOYEES = [
   { id:"ankit", name:"Ankit Prakash", email:"ankit@thikaana.co", phone:"+91 98100 00001", title:"Founder", department:"Leadership", role:"Administrator", type:"technical", permissions:"full", active:true },
   { id:"chandan", name:"Chandan Jha", email:"chandan@thikaana.co", phone:"+91 98100 00002", title:"Chief Technology Officer", department:"Technology", role:"CTO", type:"technical", permissions:"full", active:true },
   { id:"bhuvanesh", name:"Bhuvanesh Meethal", email:"bhuvanesh@thikaana.co", phone:"+91 98100 00003", title:"Director – Client Relations", department:"Client Relations", role:"Client Relations", type:"nontechnical", permissions:"full", active:true },
   { id:"irfan", name:"Irfan Azmi", email:"irfan@thikaana.co", phone:"+91 98100 00004", title:"Director – Customer Success", department:"Customer Success", role:"Customer Success", type:"nontechnical", permissions:"full", active:true }
 ];
+let EMPLOYEES = [];
+function persistEmployees(){ saveKey("employees", EMPLOYEES); }
+
+const PACKAGE_CATALOG = [
+  { id:"starter", name:"Website Only", price:35000, services:["Website Development","Hosting"] },
+  { id:"growth", name:"Website + Maintenance", price:52000, services:["Website Development","Hosting","Monthly Maintenance"] },
+  { id:"seo", name:"Website Development + SEO", price:75000, services:["Website Development","Hosting","Domain Management","Monthly Maintenance","Technical Support","SEO"] },
+  { id:"support", name:"Website + Maintenance + Support", price:68000, services:["Website Development","Hosting","Domain Management","Monthly Maintenance","Technical Support"] },
+  { id:"scale", name:"Full Growth Package", price:120000, services:["Website Development","Hosting","Domain Management","Monthly Maintenance","Technical Support","SEO","AI Automation Add-on","Priority Support"] }
+];
+const DEFAULT_ROLES = ["Owner","Manager","Marketing Manager","IT Manager","Admin","Finance","Client User"];
+const PRESENCE_OPTIONS = ["Active","On Break","Offline"];
+function presenceColor(p){ return {Active:"#16a34a","On Break":"#d97706",Offline:"#9aa0b4"}[p] || "#9aa0b4"; }
+function presenceDot(p){ return `<span class="presence-dot ${p==="Active"?"glow":""}" style="background:${presenceColor(p||"Offline")};"></span>`; }
+function getRoleOptions(){ const custom = loadKey("customRoles")||[]; return [...DEFAULT_ROLES, ...custom.filter(r=>!DEFAULT_ROLES.includes(r))]; }
+function addCustomRole(role){ if(!role) return; const custom = loadKey("customRoles")||[]; if(!getRoleOptions().includes(role)){ custom.push(role); saveKey("customRoles", custom); } }
+
 const VAULT_CATEGORIES = ["Domain & Hosting","Google Workspace","Social Media","Banking & Payments","Software & Tools","Email","Other"];
 const EXPENSE_CATEGORIES = ["Software & Subscriptions","Marketing & Ads","Office & Admin","Travel","Salaries & Contractors","Client Project Cost","Domain & Hosting","Other"];
 const CLIENT_STATUSES = ["Lead","Prospect","Active","On Hold","Completed","Inactive"];
@@ -224,7 +273,8 @@ const TECHNICAL_CATEGORIES = ["Technical Issue","Website Issue","Domain / Hostin
 const TICKET_PRIORITIES = ["Low","Medium","High","Urgent"];
 const TICKET_STATUSES = ["New","Assigned","In Progress","Waiting for Client","Resolved","Closed"];
 
-const KEYS = ["clients","clientUsers","tickets","meetings","vault","expenses","audit"];
+const KEYS = ["clients","clientUsers","tickets","meetings","vault","expenses","audit","employees","customRoles"];
+const SEED_VERSION = "3";
 
 function loadKey(k){ try{ return JSON.parse(localStorage.getItem("thikops_"+k)) || null; }catch(e){ return null; } }
 function saveKey(k, v){ localStorage.setItem("thikops_"+k, JSON.stringify(v)); }
@@ -242,45 +292,53 @@ function statusPillClass(s){ return {Active:"green",Lead:"blue",Prospect:"blue",
 
 /* ---------------- Seed data ---------------- */
 function seedIfEmpty(){
-  if(loadKey("clients")) return;
+  if(loadKey("clients") && localStorage.getItem("thikops_seedVersion")===SEED_VERSION){
+    EMPLOYEES = loadKey("employees") || SEED_EMPLOYEES.slice();
+    return;
+  }
 
+  EMPLOYEES = SEED_EMPLOYEES.slice();
+  persistEmployees();
+  localStorage.setItem("thikops_seedVersion", SEED_VERSION);
+
+  const ALL_TEAM = ["ankit","chandan","bhuvanesh","irfan"];
   const clients = [
     { id:"c-pavmantra", name:"Pav Mantra", company:"Pav Mantra Foods", website:"pavmantra.com", email:"hello@pavmantra.com", phone:"+91 98200 11221", status:"Active", onboardingDate:"2026-03-10", notes:"Food brand site — menu, story, ordering enquiries.",
       package:{ name:"Website Development + SEO", price:75000, services:["Website Development","Hosting","Domain Management","Monthly Maintenance","Technical Support","SEO"] },
       websiteStatus:{ url:"pavmantra.com", status:"Online", hosting:"Active", domain:"Active", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-20T09:00:00" },
-      assignedTeam:["ankit","chandan"] },
+      assignedTeam: ALL_TEAM.slice() },
     { id:"c-apoorva", name:"Apoorva Auto Parts", company:"Apoorva Auto Parts Pvt Ltd", website:"apoorvaauto.com", email:"sales@apoorvaauto.com", phone:"+91 98110 44552", status:"Active", onboardingDate:"2026-02-18", notes:"Auto parts supplier — catalogue, coverage area, enquiries.",
       package:{ name:"Website + Maintenance", price:52000, services:["Website Development","Hosting","Monthly Maintenance"] },
       websiteStatus:{ url:"apoorvaauto.com", status:"Online", hosting:"Active", domain:"Active", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-20T09:00:00" },
-      assignedTeam:["bhuvanesh"] },
+      assignedTeam: ALL_TEAM.slice() },
     { id:"c-hangout", name:"Hangout Cafe", company:"Hangout Cafe & Restaurant", website:"hangoutcafe.in", email:"contact@hangoutcafe.in", phone:"+91 90040 77332", status:"Active", onboardingDate:"2026-04-02", notes:"Cafe & restaurant site — menu, location, dine-in info.",
       package:{ name:"Website", price:38000, services:["Website Development","Hosting"] },
       websiteStatus:{ url:"hangoutcafe.in", status:"Online", hosting:"Active", domain:"Active", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-19T18:00:00" },
-      assignedTeam:["irfan"] },
+      assignedTeam: ALL_TEAM.slice() },
     { id:"c-srima", name:"Srima Diagnostic & Medical", company:"Srima Diagnostic & Medical Centre", website:"srimadiagnostic.com", email:"info@srimadiagnostic.com", phone:"+91 97110 22990", status:"Active", onboardingDate:"2026-01-25", notes:"Diagnostic centre & pharmacy — test listings, reports, pharmacy.",
       package:{ name:"Website + Maintenance + Support", price:68000, services:["Website Development","Hosting","Domain Management","Monthly Maintenance","Technical Support"] },
       websiteStatus:{ url:"srimadiagnostic.com", status:"Online", hosting:"Active", domain:"Renewing Soon", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-20T07:30:00" },
-      assignedTeam:["ankit","bhuvanesh"] },
+      assignedTeam: ALL_TEAM.slice() },
     { id:"c-sriram", name:"Sri Ram Gift Emporium", company:"Sri Ram Gift Emporium", website:"sriramgifts.com", email:"store@sriramgifts.com", phone:"+91 94350 66210", status:"Active", onboardingDate:"2026-05-14", notes:"Gift & home décor retailer in Mughalsarai — collections, store story.",
       package:{ name:"Website", price:31000, services:["Website Development","Hosting"] },
       websiteStatus:{ url:"sriramgifts.com", status:"Online", hosting:"Active", domain:"Active", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-19T12:00:00" },
-      assignedTeam:["bhuvanesh"] },
+      assignedTeam: ALL_TEAM.slice() },
     { id:"c-shibpur", name:"Shibpur Hindu Girls School", company:"Shibpur Hindu Girls High School", website:"shghschool.edu.in", email:"office@shghschool.edu.in", phone:"+91 98300 55127", status:"Active", onboardingDate:"2026-03-28", notes:"School information site — Howrah institution, facilities & contact.",
       package:{ name:"Website + Maintenance", price:40000, services:["Website Development","Hosting","Monthly Maintenance"] },
       websiteStatus:{ url:"shghschool.edu.in", status:"Online", hosting:"Active", domain:"Active", ssl:"Valid", maintenance:"Up to date", lastChecked:"2026-08-20T08:00:00" },
-      assignedTeam:["irfan","chandan"] }
+      assignedTeam: ALL_TEAM.slice() }
   ];
   saveKey("clients", clients);
 
   const clientUsers = [
-    { id:"cu-1", clientId:"c-pavmantra", name:"Rohan Verma", email:"rohan@pavmantra.com", role:"Owner", isAdmin:true, active:true },
-    { id:"cu-2", clientId:"c-pavmantra", name:"Aditi Nair", email:"aditi@pavmantra.com", role:"Marketing Manager", isAdmin:false, active:true },
-    { id:"cu-3", clientId:"c-apoorva", name:"Suresh Apoorva", email:"suresh@apoorvaauto.com", role:"Owner", isAdmin:true, active:true },
-    { id:"cu-4", clientId:"c-hangout", name:"Meera Kapoor", email:"meera@hangoutcafe.in", role:"Manager", isAdmin:true, active:true },
-    { id:"cu-5", clientId:"c-srima", name:"Dr. Srima Rao", email:"srima@srimadiagnostic.com", role:"Owner", isAdmin:true, active:true },
-    { id:"cu-6", clientId:"c-srima", name:"Vikas Rao", email:"vikas@srimadiagnostic.com", role:"Admin", isAdmin:false, active:true },
-    { id:"cu-7", clientId:"c-sriram", name:"Priyanka Gupta", email:"priyanka@sriramgifts.com", role:"Owner", isAdmin:true, active:true },
-    { id:"cu-8", clientId:"c-shibpur", name:"Anjali Bose", email:"anjali@shghschool.edu.in", role:"Admin / IT Coordinator", isAdmin:true, active:true }
+    { id:"cu-1", clientId:"c-pavmantra", name:"Rohan Verma", email:"rohan@pavmantra.com", role:"Owner", isAdmin:true, active:true, presence:"Active" },
+    { id:"cu-2", clientId:"c-pavmantra", name:"Aditi Nair", email:"aditi@pavmantra.com", role:"Marketing Manager", isAdmin:false, active:true, presence:"On Break" },
+    { id:"cu-3", clientId:"c-apoorva", name:"Suresh Apoorva", email:"suresh@apoorvaauto.com", role:"Owner", isAdmin:true, active:true, presence:"Active" },
+    { id:"cu-4", clientId:"c-hangout", name:"Meera Kapoor", email:"meera@hangoutcafe.in", role:"Manager", isAdmin:true, active:true, presence:"Active" },
+    { id:"cu-5", clientId:"c-srima", name:"Dr. Srima Rao", email:"srima@srimadiagnostic.com", role:"Owner", isAdmin:true, active:true, presence:"Offline" },
+    { id:"cu-6", clientId:"c-srima", name:"Vikas Rao", email:"vikas@srimadiagnostic.com", role:"Admin", isAdmin:false, active:true, presence:"Active" },
+    { id:"cu-7", clientId:"c-sriram", name:"Priyanka Gupta", email:"priyanka@sriramgifts.com", role:"Owner", isAdmin:true, active:true, presence:"Active" },
+    { id:"cu-8", clientId:"c-shibpur", name:"Anjali Bose", email:"anjali@shghschool.edu.in", role:"Admin / IT Coordinator", isAdmin:true, active:true, presence:"Active" }
   ];
   saveKey("clientUsers", clientUsers);
 
@@ -359,9 +417,9 @@ function seedIfEmpty(){
 }
 
 /* ---------------- Audit & history helpers ---------------- */
-function logAudit(action, module, summary, clientId, prevVal, newVal){
+function logAudit(action, module, summary, clientId, prevVal, newVal, actorUserId, relatedUserId){
   const logs = loadKey("audit") || [];
-  logs.unshift({ id: uid(), action, module, clientId: clientId||null, summary, performedBy: currentActorName(), prevVal: prevVal||"", newVal: newVal||"", at: new Date().toISOString() });
+  logs.unshift({ id: uid(), action, module, clientId: clientId||null, summary, performedBy: currentActorName(), actorUserId: actorUserId||null, relatedUserId: relatedUserId||actorUserId||null, prevVal: prevVal||"", newVal: newVal||"", at: new Date().toISOString() });
   saveKey("audit", logs.slice(0, 400));
 }
 function pushTicketHistory(ticket, text){
@@ -452,7 +510,12 @@ function buildSidebar(){
     const user = currentClientUser(), client = currentClientRecord();
     sidebar.innerHTML = `
       <div class="brand"><div class="logo-badge">ठ</div><div><b>${BRAND}</b><span>Client Portal</span></div></div>
-      <div class="sidebar-org"><b>${escapeHtml(client.name)}</b>Signed in as ${escapeHtml(user.name)}${user.isAdmin?" (Admin)":""}</div>
+      <div class="sidebar-org">
+        <b>${escapeHtml(client.name)}</b>${presenceDot(user.presence)}Signed in as ${escapeHtml(user.name)}${user.isAdmin?" (Admin)":""}
+        <div style="margin-top:8px;"><label style="font-size:10px;color:#9497b3;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Your Status</label>
+          <select class="presence-select" onchange="setMyPresence(this.value)">${PRESENCE_OPTIONS.map(p=>`<option value="${p}" ${p===user.presence?"selected":""}>${p}</option>`).join("")}</select>
+        </div>
+      </div>
       <div class="nav-item" data-tab="cdashboard" onclick="goToTab('cdashboard')"><span class="ic">&#9679;</span> Dashboard</div>
       <div class="nav-item" data-tab="cwebsite" onclick="goToTab('cwebsite')"><span class="ic">&#127760;</span> Website</div>
       <div class="nav-item" data-tab="crequests" onclick="goToTab('crequests')"><span class="ic">&#128203;</span> My Requests</div>
@@ -465,6 +528,11 @@ function buildSidebar(){
     `;
   }
 }
+function setMyPresence(val){
+  const users = loadKey("clientUsers")||[]; const u = users.find(x=>x.id===currentClientUser().id);
+  u.presence = val; saveKey("clientUsers", users);
+  buildSidebar();
+}
 function setActingAs(id){ const s=getSession(); s.actingAs=id; setSession(s); if(currentTab) render(); }
 
 /* ================= TAB ROUTER ================= */
@@ -475,14 +543,32 @@ function goToTab(tab){
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===tab));
   render();
 }
+let pendingTicketFilter = null, pendingClientFilter = null;
+function goToTicketsFiltered(filter){ pendingTicketFilter = filter; goToTab("tickets"); }
+function goToClientsFiltered(status){ pendingClientFilter = status; goToTab("clients"); }
 function render(){
   const s = getSession();
   const empRenderers = { dashboard:renderDashboard, clients:renderClients, tickets:renderTickets, vault:renderVault, expenses:renderExpenses, meetings:renderMeetings, employees:renderEmployees, history:renderHistory, settings:renderSettings };
   const clientRenderers = { cdashboard:renderClientDashboard, cwebsite:renderClientWebsite, crequests:renderClientRequests, craise:renderClientRaise, cpackage:renderClientPackage, cusers:renderClientUsers, chistory:renderClientHistory, cprofile:renderClientOwnProfile };
   const map = s.type==="employee" ? empRenderers : clientRenderers;
   (map[currentTab]||map[Object.keys(map)[0]])();
+  animateIn("#main-content");
 }
-function openModal(html, wide){ document.getElementById("modal-body").className = "modal" + (wide?" wide":""); document.getElementById("modal-body").innerHTML = html; document.getElementById("overlay").classList.add("open"); }
+function prefersReducedMotion(){ return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+function animateIn(sel){
+  if(typeof gsap==="undefined" || prefersReducedMotion()) return;
+  gsap.fromTo(sel, {opacity:0, y:10}, {opacity:1, y:0, duration:0.35, ease:"power2.out"});
+}
+function animateStagger(sel){
+  if(typeof gsap==="undefined" || prefersReducedMotion()) return;
+  gsap.fromTo(sel, {opacity:0, y:14}, {opacity:1, y:0, duration:0.4, stagger:0.05, ease:"power2.out"});
+}
+function openModal(html, wide){
+  document.getElementById("modal-body").className = "modal" + (wide?" wide":"");
+  document.getElementById("modal-body").innerHTML = html;
+  document.getElementById("overlay").classList.add("open");
+  if(typeof gsap!=="undefined" && !prefersReducedMotion()){ gsap.fromTo("#modal-body", {opacity:0, scale:0.96}, {opacity:1, scale:1, duration:0.22, ease:"power2.out"}); }
+}
 function closeModal(){ document.getElementById("overlay").classList.remove("open"); document.getElementById("modal-body").innerHTML=""; }
 document.getElementById("overlay").addEventListener("click", e => { if(e.target.id==="overlay") closeModal(); });
 
@@ -500,20 +586,23 @@ function renderDashboard(){
   const recentMeetings = meetings.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,3);
   const auditLog = (loadKey("audit")||[]).slice(0,8);
 
+  const statusHex = {New:"#4f46e5",Assigned:"#a5720b","In Progress":"#b26a00","Waiting for Client":"#6b7080",Resolved:"#16a34a",Closed:"#6b7080"};
+  const priorityHex = {Low:"#6b7080",Medium:"#4f46e5",High:"#b26a00",Urgent:"#e0393e"};
+
   document.getElementById("main-content").innerHTML = `
     <div class="topbar"><div><h2>Dashboard</h2><p>${BRAND} Ops overview</p></div></div>
     <div class="stat-grid">
-      <div class="stat-card"><div class="label">Total Clients</div><div class="value">${clients.length}</div></div>
-      <div class="stat-card"><div class="label">Active Clients</div><div class="value">${activeClients}</div></div>
-      <div class="stat-card"><div class="label">Open Tickets</div><div class="value">${openTickets.length}</div></div>
-      <div class="stat-card"><div class="label">Urgent Tickets</div><div class="value" style="color:var(--danger)">${urgentTickets.length}</div></div>
-      <div class="stat-card"><div class="label">Expenses This Month</div><div class="value small">${fmtMoney(monthTotal)}</div></div>
-      <div class="stat-card"><div class="label">Vault Items</div><div class="value">${vault.length}</div></div>
+      <div class="stat-card clickable accent" onclick="goToTab('clients')"><div class="label">Total Clients</div><div class="value">${clients.length}</div></div>
+      <div class="stat-card clickable accent-success" onclick="goToClientsFiltered('Active')"><div class="label">Active Clients</div><div class="value">${activeClients}</div></div>
+      <div class="stat-card clickable accent-warn" onclick="goToTicketsFiltered({openOnly:true})"><div class="label">Open Tickets</div><div class="value">${openTickets.length}</div></div>
+      <div class="stat-card clickable accent-danger" onclick="goToTicketsFiltered({priority:'Urgent'})"><div class="label">Urgent Tickets</div><div class="value" style="color:var(--danger)">${urgentTickets.length}</div></div>
+      <div class="stat-card clickable accent-gray" onclick="goToTab('expenses')"><div class="label">Expenses This Month</div><div class="value small">${fmtMoney(monthTotal)}</div></div>
+      <div class="stat-card clickable accent-gray" onclick="goToTab('vault')"><div class="label">Vault Items</div><div class="value">${vault.length}</div></div>
     </div>
     <div class="two-col">
       <div>
-        <div class="card"><h3>Ticket Summary</h3><div style="display:flex;flex-wrap:wrap;gap:8px;">${TICKET_STATUSES.map(s=>`<span class="pill ${statusPill(s)}">${s} · ${statusCounts[s]}</span>`).join("")}</div></div>
-        <div class="card"><h3>Open Tickets by Priority</h3><div style="display:flex;flex-wrap:wrap;gap:8px;">${TICKET_PRIORITIES.map(p=>`<span class="pill ${priorityPill(p)}">${p} · ${priorityCounts[p]}</span>`).join("")}</div></div>
+        <div class="card"><h3>Ticket Summary</h3><div class="status-grid">${TICKET_STATUSES.map(s=>`<div class="status-box" style="border-color:${statusHex[s]};color:${statusHex[s]};background:${statusHex[s]}14;cursor:pointer;" onclick="goToTicketsFiltered({status:'${s}'})"><div class="num">${statusCounts[s]}</div><div class="lbl">${s}</div></div>`).join("")}</div></div>
+        <div class="card"><h3>Open Tickets by Priority</h3><div class="priority-grid">${TICKET_PRIORITIES.map(p=>`<div class="priority-card ${p}" onclick="goToTicketsFiltered({priority:'${p}'})"><div class="num">${priorityCounts[p]}</div><div class="lbl">${p}</div></div>`).join("")}</div></div>
         <div class="card"><h3>Recent Activity</h3>${auditLog.length ? auditLog.map(a=>`<div style="padding:7px 0;border-bottom:1px solid #f0f1f5;font-size:12.5px;"><b>${escapeHtml(a.summary)}</b><br><span style="color:var(--muted);">${escapeHtml(a.performedBy)} · ${fmtDateTime(a.at)}</span></div>`).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No activity yet.</p>`}</div>
       </div>
       <div>
@@ -522,15 +611,17 @@ function renderDashboard(){
       </div>
     </div>
   `;
+  animateStagger(".stat-card");
 }
 
 /* ================= EMPLOYEE: CLIENTS LIST ================= */
 function renderClients(){
   if(currentClientId){ renderClientProfile(currentClientId); return; }
+  const initFilter = pendingClientFilter; pendingClientFilter = null;
   const items = loadKey("clients")||[];
   const tickets = loadKey("tickets")||[];
   const search = (document.getElementById("client-search")?.value || "").toLowerCase();
-  const statusFilter = document.getElementById("client-status")?.value || "";
+  const statusFilter = document.getElementById("client-status")?.value ?? (initFilter||"");
   const filtered = items.filter(c => (!search || (c.name+c.company).toLowerCase().includes(search)) && (!statusFilter || c.status===statusFilter));
 
   document.getElementById("main-content").innerHTML = `
@@ -540,7 +631,7 @@ function renderClients(){
       <select id="client-status" onchange="renderClients()"><option value="">All statuses</option>${CLIENT_STATUSES.map(s=>`<option ${s===statusFilter?"selected":""}>${s}</option>`).join("")}</select>
     </div>
     <div class="card" style="padding:0;overflow-x:auto;">
-      <table><thead><tr><th>Client</th><th>Package</th><th>Status</th><th>Open</th><th>Urgent</th><th>High</th><th>Medium</th><th>Low</th></tr></thead>
+      <table><thead><tr><th>Client</th><th>Package</th><th>Status</th><th>Open</th><th>Urgent</th><th>High</th><th>Medium</th><th>Low</th><th></th></tr></thead>
       <tbody>
         ${filtered.length ? filtered.map(c=>{
           const ct = tickets.filter(t=>t.clientId===c.id);
@@ -555,8 +646,9 @@ function renderClients(){
             <td>${cnt("High")?`<span class="pill orange">${cnt("High")}</span>`:"0"}</td>
             <td>${cnt("Medium")?`<span class="pill blue">${cnt("Medium")}</span>`:"0"}</td>
             <td>${cnt("Low")?`<span class="pill gray">${cnt("Low")}</span>`:"0"}</td>
+            <td onclick="event.stopPropagation();"><button class="icon-btn" onclick="loginAsClient('${c.id}')">Login ↗</button></td>
           </tr>`;
-        }).join("") : `<tr><td colspan="8" class="empty-row">No clients yet.</td></tr>`}
+        }).join("") : `<tr><td colspan="9" class="empty-row">No clients yet.</td></tr>`}
       </tbody></table>
     </div>
   `;
@@ -589,7 +681,7 @@ function saveClient(id){
     onboardingDate: existing ? existing.onboardingDate : new Date().toISOString().slice(0,10),
     package: existing ? existing.package : { name:"Not set", price:0, services:[] },
     websiteStatus: existing ? existing.websiteStatus : { url: document.getElementById("f-website").value.trim(), status:"Not checked", hosting:"—", domain:"—", ssl:"—", maintenance:"—", lastChecked:null },
-    assignedTeam: existing ? existing.assignedTeam : []
+    assignedTeam: existing ? existing.assignedTeam : ["ankit","chandan","bhuvanesh","irfan"]
   });
   const idx = items.findIndex(i=>i.id===id);
   if(idx>-1) items[idx]=record; else items.push(record);
@@ -723,14 +815,18 @@ function savePackage(clientId){
 
 /* ================= TICKETS (employee: global queue + detail) ================= */
 function renderTickets(){
+  const initFilter = pendingTicketFilter; pendingTicketFilter = null;
   const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
-  const statusFilter = document.getElementById("tk-status")?.value || "";
-  const priorityFilter = document.getElementById("tk-priority")?.value || "";
+  const statusFilter = document.getElementById("tk-status")?.value ?? (initFilter?.status||"");
+  const priorityFilter = document.getElementById("tk-priority")?.value ?? (initFilter?.priority||"");
+  const openOnly = !document.getElementById("tk-status") && !!(initFilter && initFilter.openOnly);
   const search = (document.getElementById("tk-search")?.value || "").toLowerCase();
+  const openStatuses = ["New","Assigned","In Progress","Waiting for Client"];
   const sorted = tickets.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
   const filtered = sorted.filter(t=>{
     if(statusFilter && t.status!==statusFilter) return false;
     if(priorityFilter && t.priority!==priorityFilter) return false;
+    if(openOnly && !openStatuses.includes(t.status)) return false;
     if(search){ const client = clients.find(c=>c.id===t.clientId); if(!(t.subject+t.id+(client?client.name:"")).toLowerCase().includes(search)) return false; }
     return true;
   });
@@ -752,7 +848,7 @@ function renderTickets(){
     </div>
   `;
 }
-function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); }
+function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); animateIn("#main-content"); }
 function renderTicketDetailEmployee(id){
   const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
   const t = tickets.find(x=>x.id===id);
@@ -791,7 +887,7 @@ function postReplyEmployee(ticketId){
   pushTicketHistory(t, `${currentActorName()} added a comment.`);
   if(t.status==="New") t.status="Assigned"; if(t.status==="Assigned") t.status="In Progress";
   saveKey("tickets", tickets);
-  logAudit("Comment Added","Tickets",`Replied on ${ticketId}: "${text.slice(0,50)}${text.length>50?"…":""}"`, t.clientId);
+  logAudit("Comment Added","Tickets",`Replied on ${ticketId}: "${text.slice(0,50)}${text.length>50?"…":""}"`, t.clientId, null, null, null, t.createdBy);
   renderTicketDetailEmployee(ticketId);
 }
 function updateTicketStatus(ticketId, newStatus){
@@ -800,7 +896,7 @@ function updateTicketStatus(ticketId, newStatus){
   if(newStatus==="Resolved" && !t.resolvedAt) t.resolvedAt = new Date().toISOString();
   pushTicketHistory(t, `${currentActorName()} changed status to ${newStatus}.`);
   saveKey("tickets", tickets);
-  logAudit("Status Changed","Tickets",`${ticketId} status changed`, t.clientId, old, newStatus);
+  logAudit("Status Changed","Tickets",`${ticketId} status changed`, t.clientId, old, newStatus, null, t.createdBy);
   renderTicketDetailEmployee(ticketId);
 }
 function reassignTicket(ticketId, newAssignee){
@@ -808,7 +904,7 @@ function reassignTicket(ticketId, newAssignee){
   const old = employeeName(t.assignedTo); t.assignedTo = newAssignee;
   pushTicketHistory(t, `Ticket reassigned to ${employeeName(newAssignee)} by ${currentActorName()}.`);
   saveKey("tickets", tickets);
-  logAudit("Reassigned","Tickets",`${ticketId} reassigned`, t.clientId, old, employeeName(newAssignee));
+  logAudit("Reassigned","Tickets",`${ticketId} reassigned`, t.clientId, old, employeeName(newAssignee), null, t.createdBy);
   renderTicketDetailEmployee(ticketId);
 }
 function openTicketForm(){
@@ -961,17 +1057,40 @@ function saveMeeting(){
 /* ================= EMPLOYEE: EMPLOYEES ================= */
 function renderEmployees(){
   document.getElementById("main-content").innerHTML = `
-    <div class="topbar"><div><h2>Employees</h2><p>${BRAND} team &amp; access</p></div><button class="btn secondary" onclick="alert('Adding employees will be wired up once real accounts are set up. For now the founding team has full access to everything.')">+ Add Employee</button></div>
+    <div class="topbar"><div><h2>Employees</h2><p>${BRAND} team &amp; access</p></div><button class="btn secondary" onclick="openEmployeeForm()">+ Add Employee</button></div>
     <div class="team-grid">
-      ${EMPLOYEES.map(e=>`<div class="team-card"><div class="avatar">${initials(e.name)}</div><div><div style="font-weight:700;font-size:14.5px;">${e.name}</div><div style="font-size:12.5px;color:var(--muted);">${e.title} · ${e.department}</div><div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;"><span class="pill green">Active</span><span class="pill blue">Full Access</span></div></div></div>`).join("")}
+      ${EMPLOYEES.map(e=>`<div class="team-card"><div class="avatar">${initials(e.name)}</div><div style="flex:1;"><div style="font-weight:700;font-size:14.5px;">${escapeHtml(e.name)}</div><div style="font-size:12.5px;color:var(--muted);">${escapeHtml(e.title)} · ${escapeHtml(e.department)}</div><div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;"><span class="pill ${e.active?"green":"red"}">${e.active?"Active":"Inactive"}</span><span class="pill blue">Full Access</span><span class="pill gray">${e.type==="technical"?"Technical":"Client Relations"}</span></div></div>${SEED_EMPLOYEES.some(se=>se.id===e.id)?"":`<button class="icon-btn" onclick="removeEmployee('${e.id}')">Remove</button>`}</div>`).join("")}
     </div>
     <div class="card" style="margin-top:16px;">
       <h3>About Access</h3>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 8px;">All four founding team members currently have full access to every client's data — clients, tickets, package info, vault, and expenses. There's no restriction between them yet.</p>
-      <p style="font-size:13px;color:var(--muted);margin:0;">When new employees are hired, permissions per person (view/edit clients, tickets, vault, expenses, etc.) will be configured individually here instead of everyone having full access by default.</p>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px;">All ${BRAND} team members currently have full access to every client's data — clients, tickets, package info, vault, and expenses. There's no restriction between them yet.</p>
+      <p style="font-size:13px;color:var(--muted);margin:0;">When individual permission levels are needed, they'll be configured per person here instead of everyone having full access by default.</p>
     </div>
     <div class="card"><h3>Login</h3><p style="font-size:13px;color:var(--muted);margin:0;">The whole team currently shares one login (<span class="mono">support@thikaana.co</span>) and identifies themselves via "Acting as" in the sidebar. Individual logins are planned once Google Workspace accounts are live.</p></div>
   `;
+}
+function openEmployeeForm(){
+  openModal(`
+    <h3>Add Employee</h3>
+    <div class="field-row"><div class="field"><label>Name *</label><input type="text" id="f-name"></div><div class="field"><label>Email *</label><input type="text" id="f-email"></div></div>
+    <div class="field-row"><div class="field"><label>Phone</label><input type="text" id="f-phone"></div><div class="field"><label>Job Title</label><input type="text" id="f-title" placeholder="e.g. Developer"></div></div>
+    <div class="field-row"><div class="field"><label>Department</label><input type="text" id="f-department" placeholder="e.g. Technology"></div><div class="field"><label>Ticket Routing</label><select id="f-type"><option value="technical">Technical</option><option value="nontechnical">Client Relations / Non-Technical</option></select></div></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveEmployee()">Add Employee</button></div>
+  `);
+}
+function saveEmployee(){
+  const name = document.getElementById("f-name").value.trim(); const email = document.getElementById("f-email").value.trim();
+  if(!name || !email){ alert("Name and email are required."); return; }
+  const record = { id: uid(), name, email, phone: document.getElementById("f-phone").value.trim(), title: document.getElementById("f-title").value.trim()||"Team Member", department: document.getElementById("f-department").value.trim()||"General", role:"Employee", type: document.getElementById("f-type").value, permissions:"full", active:true };
+  EMPLOYEES.push(record); persistEmployees();
+  logAudit("Employee Added","Employees", `${name} added as ${record.title}`);
+  closeModal(); renderEmployees();
+}
+function removeEmployee(id){
+  if(!confirm("Remove this employee?")) return;
+  EMPLOYEES = EMPLOYEES.filter(e=>e.id!==id); persistEmployees();
+  logAudit("Employee Removed","Employees", `Removed employee ${id}`);
+  renderEmployees();
 }
 
 /* ================= EMPLOYEE: HISTORY / AUDIT ================= */
@@ -1019,13 +1138,49 @@ function deleteItem(key, id){
 /* ================================================================= */
 function myClientTickets(){ const client = currentClientRecord(); return (loadKey("tickets")||[]).filter(t=>t.clientId===client.id); }
 
+let dashViewAsUserId = null;
 function renderClientDashboard(){
   const client = currentClientRecord(), user = currentClientUser();
+  const w = client.websiteStatus;
+
+  if(!user.isAdmin){
+    const peers = (loadKey("clientUsers")||[]).filter(u=>u.clientId===client.id);
+    const viewingId = dashViewAsUserId || user.id;
+    const viewing = peers.find(p=>p.id===viewingId) || user;
+    const tickets = (loadKey("tickets")||[]).filter(t=>t.clientId===client.id && t.createdBy===viewing.id);
+    const open = tickets.filter(t=>!["Resolved","Closed"].includes(t.status));
+    const closed = tickets.filter(t=>["Resolved","Closed"].includes(t.status));
+    const recent = tickets.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+    document.getElementById("main-content").innerHTML = `
+      <div class="topbar"><div><h2>Welcome, ${escapeHtml(user.name.split(" ")[0])}</h2><p>${escapeHtml(client.name)} · ${escapeHtml(user.role)}</p></div><button class="btn" onclick="goToTab('craise')">+ Raise Request</button></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Website Status</div><div class="value small"><span class="status-dot" style="background:${w.status==='Online'?'var(--success)':'var(--danger)'}"></span>${escapeHtml(w.status)}</div></div>
+        <div class="stat-card"><div class="label">Open Requests</div><div class="value">${open.length}</div></div>
+        <div class="stat-card"><div class="label">Resolved / Closed</div><div class="value">${closed.length}</div></div>
+        <div class="stat-card"><div class="label">Package</div><div class="value small">${escapeHtml(client.package.name)}</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <h3 style="margin:0;">Requests raised by ${viewing.id===user.id?"you":escapeHtml(viewing.name)}</h3>
+          <div>
+            <label style="font-size:11.5px;color:var(--muted);margin-right:6px;">View colleague:</label>
+            <select onchange="dashViewAsUserId=this.value;render();">
+              ${peers.map(p=>`<option value="${p.id}" ${p.id===viewingId?"selected":""}>${p.id===user.id?"Me":escapeHtml(p.name)}${p.isAdmin?" (Admin)":""}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <table><thead><tr><th>Subject</th><th>Priority</th><th>Status</th><th>Updated</th></tr></thead><tbody>
+          ${recent.length ? recent.map(t=>`<tr class="clickable" onclick="openClientTicketDetail('${t.id}')"><td><b>${escapeHtml(t.subject)}</b></td><td><span class="pill ${priorityPill(t.priority)}">${t.priority}</span></td><td><span class="pill ${statusPill(t.status)}">${t.status}</span></td><td>${fmtDateTime(t.assignedAt)}</td></tr>`).join("") : `<tr><td colspan="4" class="empty-row">No requests raised yet.</td></tr>`}
+        </tbody></table>
+      </div>
+    `;
+    return;
+  }
+
   const tickets = myClientTickets();
   const open = tickets.filter(t=>!["Resolved","Closed"].includes(t.status));
   const closed = tickets.filter(t=>["Resolved","Closed"].includes(t.status));
   const recent = tickets.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,5);
-  const w = client.websiteStatus;
   document.getElementById("main-content").innerHTML = `
     <div class="topbar"><div><h2>Welcome, ${escapeHtml(user.name.split(" ")[0])}</h2><p>${escapeHtml(client.name)} · ${escapeHtml(user.role)}</p></div><button class="btn" onclick="goToTab('craise')">+ Raise Request</button></div>
     <div class="stat-grid">
@@ -1034,7 +1189,7 @@ function renderClientDashboard(){
       <div class="stat-card"><div class="label">Resolved / Closed</div><div class="value">${closed.length}</div></div>
       <div class="stat-card"><div class="label">Package</div><div class="value small">${escapeHtml(client.package.name)}</div></div>
     </div>
-    <div class="card"><h3>Recent Requests</h3>
+    <div class="card"><h3>Recent Requests (whole account)</h3>
       <table><thead><tr><th>Subject</th><th>Priority</th><th>Status</th><th>Updated</th></tr></thead><tbody>
         ${recent.length ? recent.map(t=>`<tr class="clickable" onclick="openClientTicketDetail('${t.id}')"><td><b>${escapeHtml(t.subject)}</b></td><td><span class="pill ${priorityPill(t.priority)}">${t.priority}</span></td><td><span class="pill ${statusPill(t.status)}">${t.status}</span></td><td>${fmtDateTime(t.assignedAt)}</td></tr>`).join("") : `<tr><td colspan="4" class="empty-row">No requests yet.</td></tr>`}
       </tbody></table>
@@ -1103,7 +1258,7 @@ function postReplyClient(ticketId){
   pushTicketHistory(t, `${user.name} added a comment.`);
   if(t.status==="Waiting for Client") t.status="In Progress";
   saveKey("tickets", tickets);
-  logAudit("Comment Added","Tickets",`Client replied on ${ticketId}`, t.clientId);
+  logAudit("Comment Added","Tickets",`Client replied on ${ticketId}`, t.clientId, null, null, user.id);
   renderClientTicketDetail(ticketId);
 }
 function renderClientRaise(){
@@ -1132,12 +1287,13 @@ function submitClientTicket(){
   const comments = extra ? [{author:user.name, role:"client", text:extra, at:new Date().toISOString()}] : [];
   const record = { id, clientId: client.id, createdBy: user.id, subject, description, category, priority: document.querySelector('input[name="priority"]:checked').value, status:"Assigned", assignedTo, createdAt:new Date().toISOString(), assignedAt:new Date().toISOString(), pageUrl: document.getElementById("f-pageurl").value.trim(), comments, history:[{text:`${client.name} created the ticket.`, at:new Date().toISOString()},{text:`Ticket auto-assigned to ${employeeName(assignedTo)}.`, at:new Date().toISOString()}] };
   tickets.push(record); saveKey("tickets", tickets);
-  logAudit("Ticket Created","Tickets", `${id}: "${subject}" from ${client.name}`, client.id);
+  logAudit("Ticket Created","Tickets", `${id}: "${subject}" from ${client.name}`, client.id, null, null, user.id);
   goToTab("crequests");
   alert(`Request submitted as ${id}. It's been routed to ${employeeName(assignedTo)}.`);
 }
 function renderClientPackage(){
-  const client = currentClientRecord();
+  const client = currentClientRecord(), user = currentClientUser();
+  const others = PACKAGE_CATALOG.filter(p=>p.name !== client.package.name);
   document.getElementById("main-content").innerHTML = `
     <div class="topbar"><div><h2>Package</h2><p>Your current plan with ${BRAND}</p></div></div>
     <div class="card" style="max-width:480px;">
@@ -1147,6 +1303,18 @@ function renderClientPackage(){
       <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.9;">${(client.package.services||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ul>
       <p style="font-size:11.5px;color:var(--muted);margin-top:14px;">Only ${BRAND} can change package details. Contact your account team for upgrades.</p>
     </div>
+    ${user.isAdmin ? `
+    <div class="card">
+      <h3>Other Available Packages</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Opens in a new tab with full details, plus options to buy or talk to us.</p>
+      <div class="team-grid">
+        ${others.map(p=>`<div class="other-pkg-card" onclick="window.open(location.pathname+'?viewPackage=${p.id}&forClient=${client.id}','_blank')">
+          <div style="font-weight:700;font-size:14px;">${escapeHtml(p.name)}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--accent);margin:4px 0 8px;">${fmtMoney(p.price)}</div>
+          <div style="font-size:11.5px;color:var(--muted);">${p.services.length} services included ↗</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
   `;
 }
 function renderClientUsers(){
@@ -1156,34 +1324,61 @@ function renderClientUsers(){
   document.getElementById("main-content").innerHTML = `
     <div class="topbar"><div><h2>Users</h2><p>Manage who from ${escapeHtml(client.name)} can access ${BRAND} Ops</p></div><button class="btn" onclick="openClientUserForm()">+ Add User</button></div>
     <div class="card" style="padding:0;overflow-x:auto;">
-      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
-      <tbody>${users.map(u=>`<tr><td><b>${escapeHtml(u.name)}</b>${u.isAdmin?` <span class="pill blue">Client Admin</span>`:""}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role)}</td><td><span class="pill ${u.active?"green":"red"}">${u.active?"Active":"Deactivated"}</span></td><td class="row-actions">${u.id===me.id?"<span style=\"color:var(--muted);font-size:12px;\">You</span>":`<button class="icon-btn" onclick="toggleClientUserActive('${u.id}')">${u.active?"Deactivate":"Activate"}</button><button class="icon-btn" onclick="deleteClientUser('${u.id}')">Remove</button>`}</td></tr>`).join("")}</tbody></table>
+      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Presence</th><th></th></tr></thead>
+      <tbody>${users.map(u=>`<tr><td><b>${escapeHtml(u.name)}</b>${u.isAdmin?` <span class="pill blue">Client Admin</span>`:""}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role)}</td><td><span class="pill ${u.active?"green":"red"}">${u.active?"Active":"Deactivated"}</span></td><td>${presenceDot(u.presence)}${escapeHtml(u.presence||"Offline")}</td><td class="row-actions">${u.id===me.id?"<span style=\"color:var(--muted);font-size:12px;\">You</span>":`<button class="icon-btn" onclick="openClientUserForm('${u.id}')">Edit</button><button class="icon-btn" onclick="toggleClientUserActive('${u.id}')">${u.active?"Deactivate":"Activate"}</button><button class="icon-btn" onclick="deleteClientUser('${u.id}')">Remove</button>`}</td></tr>`).join("")}</tbody></table>
     </div>
     <div class="card"><p style="font-size:12.5px;color:var(--muted);margin:0;">There must always be exactly one Client Admin. Removing yourself as admin isn't available in this demo — contact ${BRAND} to transfer admin rights.</p></div>
   `;
 }
-function openClientUserForm(){
+function roleSelectHtml(currentRole){
+  const opts = getRoleOptions();
+  const isCustom = currentRole && !opts.includes(currentRole);
+  return `
+    <select id="f-role-select" onchange="document.getElementById('f-role-custom').style.display=this.value==='__custom__'?'block':'none';">
+      ${opts.map(r=>`<option value="${escapeHtml(r)}" ${r===currentRole?"selected":""}>${escapeHtml(r)}</option>`).join("")}
+      <option value="__custom__" ${isCustom?"selected":""}>+ Add new role...</option>
+    </select>
+    <input type="text" id="f-role-custom" placeholder="Type new role name" value="${isCustom?escapeHtml(currentRole):""}" style="display:${isCustom?"block":"none"};margin-top:6px;">
+  `;
+}
+function openClientUserForm(id){
+  const users = loadKey("clientUsers")||[]; const item = id ? users.find(u=>u.id===id) : {};
   openModal(`
-    <h3>Add User</h3>
-    <div class="field"><label>Name *</label><input type="text" id="f-name"></div>
-    <div class="field"><label>Email *</label><input type="text" id="f-email"></div>
-    <div class="field"><label>Role / Title</label><input type="text" id="f-role" placeholder="e.g. Marketing Manager" value="Client User"></div>
-    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveClientUser()">Add User</button></div>
+    <h3>${id?"Edit":"Add"} User</h3>
+    <div class="field"><label>Name *</label><input type="text" id="f-name" value="${escapeHtml(item.name||"")}"></div>
+    <div class="field"><label>Email *</label><input type="text" id="f-email" value="${escapeHtml(item.email||"")}" ${id?"readonly style=\"background:#f4f5f9;\"":""}></div>
+    <div class="field"><label>Role</label>${roleSelectHtml(item.role||"")}</div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveClientUser('${id||""}')">Save</button></div>
   `);
 }
-function saveClientUser(){
-  const name = document.getElementById("f-name").value.trim(); const email = document.getElementById("f-email").value.trim();
-  if(!name || !email){ alert("Name and email are required."); return; }
+function resolveRoleFromForm(){
+  let role = document.getElementById("f-role-select").value;
+  if(role==="__custom__"){ role = document.getElementById("f-role-custom").value.trim() || "Client User"; addCustomRole(role); }
+  return role;
+}
+function saveClientUser(id){
+  const name = document.getElementById("f-name").value.trim();
+  if(!name){ alert("Name is required."); return; }
   const client = currentClientRecord();
   const users = loadKey("clientUsers")||[];
-  const record = { id: uid(), clientId: client.id, name, email, role: document.getElementById("f-role").value.trim()||"Client User", isAdmin:false, active:true };
-  users.push(record); saveKey("clientUsers", users);
-  logAudit("Client User Added","Client Users", `${name} added to ${client.name} (password: demo123)`, client.id);
+  const role = resolveRoleFromForm();
+  if(id){
+    const u = users.find(x=>x.id===id);
+    u.name = name; u.role = role;
+    saveKey("clientUsers", users);
+    logAudit("Client User Updated","Client Users", `${name}'s details updated`, client.id, null, null, currentClientUser().id);
+  } else {
+    const email = document.getElementById("f-email").value.trim();
+    if(!email){ alert("Email is required."); return; }
+    const record = { id: uid(), clientId: client.id, name, email, role, isAdmin:false, active:true, presence:"Active" };
+    users.push(record); saveKey("clientUsers", users);
+    logAudit("Client User Added","Client Users", `${name} added to ${client.name} (password: demo123)`, client.id, null, null, currentClientUser().id);
+  }
   closeModal(); renderClientUsers();
 }
 function toggleClientUserActive(id){
   const users = loadKey("clientUsers")||[]; const u = users.find(x=>x.id===id); u.active = !u.active; saveKey("clientUsers", users);
-  logAudit(u.active?"User Activated":"User Deactivated","Client Users", u.name, u.clientId);
+  logAudit(u.active?"User Activated":"User Deactivated","Client Users", u.name, u.clientId, null, null, currentClientUser().id);
   renderClientUsers();
 }
 function deleteClientUser(id){
@@ -1191,33 +1386,96 @@ function deleteClientUser(id){
   if(u.isAdmin){ alert("You can't remove the Client Admin. Transfer admin rights first."); return; }
   if(!confirm(`Remove ${u.name} from this account?`)) return;
   saveKey("clientUsers", users.filter(x=>x.id!==id));
-  logAudit("User Removed","Client Users", u.name, u.clientId);
+  logAudit("User Removed","Client Users", u.name, u.clientId, null, null, currentClientUser().id);
   renderClientUsers();
 }
 function renderClientHistory(){
-  const client = currentClientRecord();
-  const history = (loadKey("audit")||[]).filter(a=>a.clientId===client.id).sort((a,b)=>(b.at||"").localeCompare(a.at||""));
+  const client = currentClientRecord(), me = currentClientUser();
+  let history = (loadKey("audit")||[]).filter(a=>a.clientId===client.id);
+  if(!me.isAdmin){ history = history.filter(a => a.actorUserId===me.id || a.relatedUserId===me.id); }
+  history = history.sort((a,b)=>(b.at||"").localeCompare(a.at||""));
   document.getElementById("main-content").innerHTML = `
-    <div class="topbar"><div><h2>History</h2><p>Activity on your account</p></div></div>
+    <div class="topbar"><div><h2>History</h2><p>${me.isAdmin?"Full activity on your account":"Activity related to you"}</p></div></div>
     <div class="card">${history.length ? history.map(h=>`<div class="history-item"><div class="time">${fmtDateTime(h.at)}</div><div>${escapeHtml(h.summary)}</div></div>`).join("") : `<p class="empty-row">No history yet.</p>`}</div>
   `;
 }
 function renderClientOwnProfile(){
   const user = currentClientUser(), client = currentClientRecord();
+  const team = (loadKey("clientUsers")||[]).filter(u=>u.clientId===client.id && u.id!==user.id);
   document.getElementById("main-content").innerHTML = `
     <div class="topbar"><div><h2>Profile</h2><p>Your account details</p></div></div>
     <div class="card" style="max-width:480px;">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;"><div class="avatar" style="width:52px;height:52px;font-size:18px;">${initials(user.name)}</div><div><div style="font-weight:700;font-size:16px;">${escapeHtml(user.name)}</div><div style="color:var(--muted);font-size:13px;">${escapeHtml(user.role)}${user.isAdmin?" · Client Admin":""}</div></div></div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;"><div class="avatar" style="width:52px;height:52px;font-size:18px;">${initials(user.name)}</div><div><div style="font-weight:700;font-size:16px;">${escapeHtml(user.name)}${presenceDot(user.presence)}</div><div style="color:var(--muted);font-size:13px;">${escapeHtml(user.role)}${user.isAdmin?" · Client Admin":""}</div></div></div>
       <div style="font-size:13.5px;line-height:2.1;">Email: ${escapeHtml(user.email)}<br>Organization: ${escapeHtml(client.name)}<br>Company: ${escapeHtml(client.company)}</div>
     </div>
+    ${user.isAdmin ? `<div class="card" style="max-width:480px;"><h3>Your Team</h3>${team.length ? team.map(u=>`<div style="display:flex;align-items:center;gap:9px;padding:7px 0;"><div class="avatar">${initials(u.name)}</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">${escapeHtml(u.name)}${presenceDot(u.presence)}</div><div style="font-size:11.5px;color:var(--muted);">${escapeHtml(u.role)} · ${u.active?"Active":"Deactivated"}</div></div></div>`).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No other users yet.</p>`}</div>` : ""}
   `;
 }
 
-/* ---------------- Init ---------------- */
+/* ---------------- Employee access into a client account ---------------- */
+function loginAsClient(clientId){
+  window.open(location.pathname + "?asClient=" + encodeURIComponent(clientId), "_blank");
+}
+function loginAsClientEmployeeAccess(clientId){
+  const users = loadKey("clientUsers")||[];
+  const admin = users.find(u=>u.clientId===clientId && u.isAdmin) || users.find(u=>u.clientId===clientId);
+  const client = (loadKey("clients")||[]).find(c=>c.id===clientId);
+  if(!admin || !client){ document.body.innerHTML = `<div style="padding:60px;text-align:center;font-family:sans-serif;">Client not found.</div>`; return; }
+  setSession({ type:"client", userId: admin.id, employeeAccess:true });
+  showApp();
+  const banner = document.getElementById("impersonation-banner");
+  banner.style.display = "block";
+  banner.innerHTML = `🔧 ${BRAND} Team Access — viewing <b>${escapeHtml(client.name)}</b>'s account with full permissions. This tab is separate from your normal login.`;
+}
+
+/* ---------------- Standalone package landing page (opened in a new tab) ---------------- */
+function renderPackageLandingPage(pkgId, forClientId){
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("demo-banner").style.display = "none";
+  const pkg = PACKAGE_CATALOG.find(p=>p.id===pkgId);
+  const client = (loadKey("clients")||[]).find(c=>c.id===forClientId);
+  const el = document.getElementById("package-landing");
+  el.style.display = "block";
+  if(!pkg){ el.innerHTML = `<div style="padding:60px;text-align:center;">Package not found.</div>`; return; }
+  el.innerHTML = `
+    <div style="max-width:560px;margin:0 auto;padding:60px 20px;">
+      <div class="logo-badge" style="margin-bottom:16px;">ठ</div>
+      <h1 style="font-size:24px;margin:0 0 4px;">${escapeHtml(pkg.name)}</h1>
+      <p style="color:var(--muted);margin:0 0 20px;">${client?("For "+escapeHtml(client.name)+" · "):""}${BRAND} Ops</p>
+      <div class="card">
+        <div style="font-size:30px;font-weight:800;color:var(--accent);margin-bottom:14px;">${fmtMoney(pkg.price)}</div>
+        <div style="font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">What's Included</div>
+        <ul style="margin:0 0 20px;padding-left:18px;font-size:14px;line-height:2;">${pkg.services.map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ul>
+        <button class="btn" style="width:100%;margin-bottom:10px;" onclick="mockBuyPackage('${pkg.id}','${forClientId||""}')">Buy This Package</button>
+        <div style="display:flex;gap:10px;">
+          <a class="btn secondary small" style="flex:1;text-align:center;text-decoration:none;box-sizing:border-box;" href="mailto:bhuvanesh@thikaana.co?subject=${encodeURIComponent("Interested in "+pkg.name)}">Connect with Bhuvanesh</a>
+          <a class="btn secondary small" style="flex:1;text-align:center;text-decoration:none;box-sizing:border-box;" href="mailto:irfan@thikaana.co?subject=${encodeURIComponent("Interested in "+pkg.name)}">Connect with Irfan</a>
+        </div>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:16px;">You can close this tab and return to your account anytime.</p>
+    </div>
+  `;
+  animateIn("#package-landing");
+}
+function mockBuyPackage(pkgId, clientId){
+  const pkg = PACKAGE_CATALOG.find(p=>p.id===pkgId);
+  logAudit("Package Interest","Packages", `Interested in upgrading to ${pkg.name}`, clientId||null);
+  alert("Thanks! This is a demo — in the live version this would start checkout. Our team will reach out to confirm.");
+}
+
+/* ---------------- Init / routing ---------------- */
 seedIfEmpty();
 populateDemoHint();
-const _s = getSession();
-if(_s){ showApp(); }
+const _urlParams = new URLSearchParams(window.location.search);
+if(_urlParams.get("viewPackage")){
+  renderPackageLandingPage(_urlParams.get("viewPackage"), _urlParams.get("forClient"));
+} else if(_urlParams.get("asClient")){
+  loginAsClientEmployeeAccess(_urlParams.get("asClient"));
+} else {
+  const _s = getSession();
+  if(_s){ showApp(); }
+}
 </script>
 </body>
 </html>
