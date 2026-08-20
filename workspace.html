@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thikaana Workspace (Demo)</title>
+<style>
+  :root{
+    --bg:#f4f5f9; --card:#ffffff; --border:#e3e5ec; --text:#1d2030; --muted:#6b7080;
+    --sidebar:#171a2b; --sidebar-text:#c7c9db; --sidebar-active:#2a2f4a;
+    --accent:#4f46e5; --accent-hover:#4338ca; --accent-soft:#eef0fe;
+    --danger:#e0393e; --danger-soft:#fdeaea; --success:#16a34a; --success-soft:#e9f8ee;
+    --warn:#b26a00; --warn-soft:#fef3e0;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  #demo-banner{background:#1d2030;color:#fff;font-size:12.5px;padding:7px 16px;text-align:center;}
+  #demo-banner b{color:#ffcf70;}
+
+  #login-screen{min-height:calc(100vh - 34px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#171a2b,#2a2f6a);}
+  .login-box{background:var(--card);padding:40px 36px;border-radius:16px;width:360px;box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:center;}
+  .logo-badge{width:56px;height:56px;border-radius:14px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;margin:0 auto 14px;}
+  .login-box h1{font-size:20px;margin:0 0 4px;}
+  .login-box p.sub{color:var(--muted);font-size:13px;margin:0 0 22px;}
+  .login-box input{width:100%;padding:11px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;}
+  .login-box button{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;margin-top:6px;}
+  .login-box button:hover{background:var(--accent-hover);}
+  #login-error{color:var(--danger);font-size:12.5px;min-height:18px;margin-top:2px;}
+  .demo-hint{background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:9px 12px;font-size:11.5px;margin-top:14px;text-align:left;line-height:1.5;}
+
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:calc(100vh - 34px);}
+  .sidebar{width:222px;background:var(--sidebar);color:var(--sidebar-text);flex-shrink:0;display:flex;flex-direction:column;padding:16px 12px;}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;}
+  .sidebar .brand .logo-badge{width:34px;height:34px;font-size:15px;border-radius:9px;margin:0;}
+  .sidebar .brand b{color:#fff;font-size:15px;}
+  .sidebar .brand span{display:block;font-size:10.5px;color:#9497b3;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--sidebar-text);font-size:13.3px;cursor:pointer;margin-bottom:2px;user-select:none;}
+  .nav-item:hover{background:#20233c;}
+  .nav-item.active{background:var(--sidebar-active);color:#fff;font-weight:600;}
+  .nav-item .ic{width:18px;text-align:center;}
+  .nav-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#666a86;padding:14px 12px 4px;}
+
+  .acting-as{background:#20233c;border-radius:8px;padding:9px 10px;margin-bottom:10px;}
+  .acting-as label{display:block;font-size:10px;color:#9497b3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+  .acting-as select{width:100%;background:#171a2b;color:#fff;border:1px solid #33375a;border-radius:6px;padding:6px 7px;font-size:12.5px;}
+
+  .sidebar-footer{margin-top:auto;padding-top:8px;border-top:1px solid #262a44;}
+  .sidebar-footer button{width:100%;padding:8px;background:#262a44;color:#fff;border:none;border-radius:7px;font-size:12.5px;}
+  .sidebar-footer button:hover{background:#31355a;}
+
+  .main{flex:1;padding:26px 32px;overflow-y:auto;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .topbar h2{margin:0 0 2px;font-size:21px;}
+  .topbar p{margin:0;color:var(--muted);font-size:13px;}
+  .btn{padding:9px 16px;border-radius:8px;border:none;font-size:13.5px;font-weight:600;background:var(--accent);color:#fff;}
+  .btn:hover{background:var(--accent-hover);}
+  .btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border);}
+  .btn.secondary:hover{background:#f0f1f6;}
+  .btn.small{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;}
+  .stat-card .label{font-size:11.5px;color:var(--muted);margin-bottom:6px;}
+  .stat-card .value{font-size:21px;font-weight:700;}
+  .stat-card .value.small{font-size:16px;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .card h3{margin:0 0 14px;font-size:14.5px;}
+
+  .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+  @media (max-width:900px){ .two-col{grid-template-columns:1fr;} }
+
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+  .toolbar input[type=text],.toolbar input[type=search],.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:#fff;}
+  .toolbar .grow{flex:1;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:10px 10px;border-bottom:1px solid #eef0f5;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  tr.clickable:hover{background:#f7f8fc;cursor:pointer;}
+  .empty-row{text-align:center;color:var(--muted);padding:30px !important;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .pill.gray{background:#eef0f5;color:#555a72;}
+  .pill.green{background:var(--success-soft);color:var(--success);}
+  .pill.red{background:var(--danger-soft);color:var(--danger);}
+  .pill.blue{background:var(--accent-soft);color:var(--accent);}
+  .pill.yellow{background:#fef6e0;color:#a5720b;}
+  .pill.orange{background:var(--warn-soft);color:var(--warn);}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 8px;font-size:12px;}
+  .icon-btn:hover{background:#f0f1f6;}
+  .pw-cell{display:flex;align-items:center;gap:6px;}
+
+  .avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .team-card{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .team-card .avatar{width:44px;height:44px;font-size:16px;}
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+
+  .comment{display:flex;gap:10px;margin-bottom:14px;}
+  .comment .avatar{width:28px;height:28px;font-size:11px;}
+  .comment .bubble{background:#f5f6fa;border-radius:10px;padding:9px 12px;flex:1;}
+  .comment.client .bubble{background:var(--accent-soft);}
+  .comment .meta{font-size:11.5px;color:var(--muted);margin-bottom:3px;}
+  .comment .meta b{color:var(--text);}
+  .comment .text{font-size:13px;line-height:1.5;white-space:pre-wrap;}
+
+  .overlay{position:fixed;inset:0;background:rgba(15,17,32,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:24px 26px;}
+  .modal.wide{max-width:720px;}
+  .modal h3{margin:0 0 16px;font-size:16px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#464a5c;margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:7px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .checkbox-group{display:flex;flex-wrap:wrap;gap:10px;}
+  .checkbox-group label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:7px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .action-item-row{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
+  .action-item-row input[type=text]{flex:2;}
+  .action-item-row input[type=date]{flex:1.2;}
+  .action-item-row select{flex:1;}
+  .action-item-row .icon-btn{flex:0;}
+
+  .back-link{font-size:12.5px;color:var(--accent);cursor:pointer;margin-bottom:10px;display:inline-block;}
+  .profile-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .profile-stats{display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;}
+  .profile-stats div{font-size:12.5px;color:var(--muted);}
+  .profile-stats b{display:block;color:var(--text);font-size:17px;font-weight:700;}
+
+  ::placeholder{color:#a7abbd;}
+</style>
+</head>
+<body>
+
+<div id="demo-banner">DEMO MODE — dummy data only, nothing here is a real client account. Will move to a real database + login once ready. Login: <b>support@thikaana.co</b> / <b>demo123</b></div>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo-badge">T</div>
+    <h1>Thikaana Workspace</h1>
+    <p class="sub">Internal team login</p>
+    <input type="text" id="login-user" placeholder="Email" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button onclick="attemptLogin()">Sign In</button>
+    <div class="demo-hint">Demo login — <b>support@thikaana.co</b> / <b>demo123</b>. After signing in, pick who you are from "Acting as" in the sidebar.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand">
+        <div class="logo-badge">T</div>
+        <div><b>Thikaana</b><span>Workspace (Demo)</span></div>
+      </div>
+
+      <div class="acting-as">
+        <label>Acting as</label>
+        <select id="acting-as-select" onchange="setActingAs(this.value)"></select>
+      </div>
+
+      <div class="nav-item" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="ic">&#9679;</span> Dashboard</div>
+      <div class="nav-item" data-tab="tickets" onclick="switchTab('tickets')"><span class="ic">&#127915;</span> Tickets</div>
+      <div class="nav-item" data-tab="clients" onclick="switchTab('clients')"><span class="ic">&#128100;</span> Clients</div>
+      <div class="nav-label">Internal</div>
+      <div class="nav-item" data-tab="vault" onclick="switchTab('vault')"><span class="ic">&#128274;</span> Vault</div>
+      <div class="nav-item" data-tab="expenses" onclick="switchTab('expenses')"><span class="ic">&#8377;</span> Expenses</div>
+      <div class="nav-item" data-tab="meetings" onclick="switchTab('meetings')"><span class="ic">&#128221;</span> Meeting Notes</div>
+      <div class="nav-item" data-tab="team" onclick="switchTab('team')"><span class="ic">&#128101;</span> Team</div>
+      <div class="nav-item" data-tab="audit" onclick="switchTab('audit')"><span class="ic">&#128203;</span> Audit Logs</div>
+
+      <div class="sidebar-footer">
+        <button onclick="logout()">Log Out</button>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+/* ================= CONFIG / DEMO DATA ================= */
+const AUTH = { username: "support@thikaana.co", password: "demo123" };
+const TEAM = [
+  { id:"ankit", name:"Ankit Prakash", role:"Founder", type:"technical" },
+  { id:"chandan", name:"Chandan Jha", role:"Chief Technology Officer", type:"technical" },
+  { id:"bhuvanesh", name:"Bhuvanesh Meethal", role:"Director – Client Relations", type:"nontechnical" },
+  { id:"irfan", name:"Irfan Azmi", role:"Director – Customer Success", type:"nontechnical" }
+];
+const VAULT_CATEGORIES = ["Domain & Hosting","Google Workspace","Social Media","Banking & Payments","Software & Tools","Email","Other"];
+const EXPENSE_CATEGORIES = ["Software & Subscriptions","Marketing & Ads","Office & Admin","Travel","Salaries & Contractors","Client Project Cost","Domain & Hosting","Other"];
+const CLIENT_STATUSES = ["Lead","Prospect","Active","On Hold","Completed","Inactive"];
+const TICKET_CATEGORIES = ["Technical Issue","Website Issue","Content Update","Design Change","Domain / Hosting","Email","General Request","Other"];
+const TECHNICAL_CATEGORIES = ["Technical Issue","Website Issue","Domain / Hosting","Email"];
+const TICKET_PRIORITIES = ["Low","Medium","High","Urgent"];
+const TICKET_STATUSES = ["New","Assigned","In Progress","Waiting for Client","Resolved","Closed"];
+
+const KEYS = ["vault","expenses","clients","clientUsers","meetings","tickets","audit"];
+const PREFIX = "thikwork_";
+
+function loadKey(k){ try{ return JSON.parse(localStorage.getItem(PREFIX+k)) || null; }catch(e){ return null; } }
+function saveKey(k, v){ localStorage.setItem(PREFIX+k, JSON.stringify(v)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function fmtMoney(n){ return "₹" + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2}); }
+function fmtDate(d){ if(!d) return "—"; const dt=new Date(d+"T00:00:00"); if(isNaN(dt)) return d; return dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}); }
+function fmtDateTime(iso){ if(!iso) return "—"; const dt=new Date(iso); return dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}) + " " + dt.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}); }
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function teamOptions(selected){ return TEAM.map(t=>`<option value="${t.id}" ${t.id===selected?"selected":""}>${t.name} (${t.role})</option>`).join(""); }
+function teamName(id){ const t=TEAM.find(x=>x.id===id); return t?t.name:(id||"—"); }
+function initials(name){ return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+
+/* ---------------- Seed data (fresh install only) ---------------- */
+function seedIfEmpty(){
+  if(loadKey("clients")) return; // already seeded once
+
+  const clients = [
+    { id:"c-pavmantra", name:"Pav Mantra", company:"Pav Mantra Foods", website:"aidevstudioone-max.github.io/pav-mantra-site/", email:"hello@pavmantra.com", phone:"+91 98200 11221", dealValue:45000, status:"Active", startDate:"2026-03-10", notes:"Food brand site — menu, story, ordering enquiries." },
+    { id:"c-apoorva", name:"Apoorva Auto Parts", company:"Apoorva Auto Parts Pvt Ltd", website:"aidevstudioone-max.github.io/apoorva-auto-parts-site/", email:"sales@apoorvaauto.com", phone:"+91 98110 44552", dealValue:52000, status:"Active", startDate:"2026-02-18", notes:"Auto parts supplier — catalogue, coverage area, enquiries." },
+    { id:"c-hangout", name:"Hangout Cafe", company:"Hangout Cafe & Restaurant", website:"aidevstudioone-max.github.io/hangout-cafe/", email:"contact@hangoutcafe.in", phone:"+91 90040 77332", dealValue:38000, status:"Active", startDate:"2026-04-02", notes:"Cafe & restaurant site — menu, location, dine-in info." },
+    { id:"c-srima", name:"Srima Diagnostic & Medical", company:"Srima Diagnostic & Medical Centre", website:"aidevstudioone-max.github.io/Srima/", email:"info@srimadiagnostic.com", phone:"+91 97110 22990", dealValue:68000, status:"Active", startDate:"2026-01-25", notes:"Diagnostic centre & pharmacy — test listings, reports, pharmacy." },
+    { id:"c-sriram", name:"Sri Ram Gift Emporium", company:"Sri Ram Gift Emporium", website:"aidevstudioone-max.github.io/shree_gift_hub/", email:"store@sriramgifts.com", phone:"+91 94350 66210", dealValue:31000, status:"Active", startDate:"2026-05-14", notes:"Gift & home décor retailer in Mughalsarai — collections, store story." },
+    { id:"c-shibpur", name:"Shibpur Hindu Girls School", company:"Shibpur Hindu Girls High School", website:"aidevstudioone-max.github.io/ShibpurHinduGirlsHighSchool/", email:"office@shghschool.edu.in", phone:"+91 98300 55127", dealValue:40000, status:"Active", startDate:"2026-03-28", notes:"School information site — Howrah institution, facilities & contact." }
+  ];
+  saveKey("clients", clients);
+
+  const clientUsers = [
+    { id:"cu-1", clientId:"c-pavmantra", name:"Rohan Verma", email:"rohan@pavmantra.com", role:"Owner" },
+    { id:"cu-2", clientId:"c-pavmantra", name:"Aditi Nair", email:"aditi@pavmantra.com", role:"Marketing Manager" },
+    { id:"cu-3", clientId:"c-apoorva", name:"Suresh Apoorva", email:"suresh@apoorvaauto.com", role:"Owner" },
+    { id:"cu-4", clientId:"c-hangout", name:"Meera Kapoor", email:"meera@hangoutcafe.in", role:"Manager" },
+    { id:"cu-5", clientId:"c-srima", name:"Dr. Srima Rao", email:"srima@srimadiagnostic.com", role:"Owner" },
+    { id:"cu-6", clientId:"c-srima", name:"Vikas Rao", email:"vikas@srimadiagnostic.com", role:"Admin" },
+    { id:"cu-7", clientId:"c-sriram", name:"Priyanka Gupta", email:"priyanka@sriramgifts.com", role:"Owner" },
+    { id:"cu-8", clientId:"c-shibpur", name:"Anjali Bose", email:"anjali@shghschool.edu.in", role:"Admin / IT Coordinator" }
+  ];
+  saveKey("clientUsers", clientUsers);
+
+  const now = Date.now();
+  const daysAgo = n => new Date(now - n*86400000).toISOString();
+
+  const tickets = [
+    { id:"t-1001", clientId:"c-pavmantra", createdBy:"cu-1", subject:"Online ordering form not submitting", description:"Customers report the enquiry form on the ordering page spins forever and never confirms.", category:"Technical Issue", priority:"Urgent", status:"In Progress", assignedTo:"chandan", assignedBy:"system", createdAt:daysAgo(2), assignedAt:daysAgo(2), pageUrl:"pavmantra.com/order", comments:[
+        {author:"Rohan Verma", role:"client", text:"Website contact form is not working.", at:daysAgo(2)},
+        {author:"Chandan Jha", role:"internal", text:"We are checking the issue.", at:daysAgo(1.5)},
+        {author:"Rohan Verma", role:"client", text:"Okay, thank you.", at:daysAgo(1.4)}
+    ]},
+    { id:"t-1002", clientId:"c-apoorva", createdBy:"cu-3", subject:"Update catalogue with new brake pad range", description:"We've added 12 new SKUs, need the catalogue page updated with prices.", category:"Content Update", priority:"Medium", status:"Waiting for Client", assignedTo:"bhuvanesh", assignedBy:"system", createdAt:daysAgo(5), assignedAt:daysAgo(5), pageUrl:"apoorvaauto.com/catalogue", comments:[
+        {author:"Suresh Apoorva", role:"client", text:"Sharing the new price list by email shortly.", at:daysAgo(5)},
+        {author:"Bhuvanesh Meethal", role:"internal", text:"Got it — waiting on the file, will update within a day of receiving it.", at:daysAgo(4.6)}
+    ]},
+    { id:"t-1003", clientId:"c-hangout", createdBy:"cu-4", subject:"Change weekend timings on homepage", description:"We're now open till 11pm on Fri/Sat, homepage still shows 10pm.", category:"Content Update", priority:"Low", status:"Resolved", assignedTo:"irfan", assignedBy:"system", createdAt:daysAgo(9), assignedAt:daysAgo(9), resolvedAt:daysAgo(8), pageUrl:"hangoutcafe.in", comments:[
+        {author:"Meera Kapoor", role:"client", text:"Can we get weekend hours updated?", at:daysAgo(9)},
+        {author:"Irfan Azmi", role:"internal", text:"Updated — please check and confirm.", at:daysAgo(8)},
+        {author:"Meera Kapoor", role:"client", text:"Looks perfect, thanks!", at:daysAgo(7.8)}
+    ]},
+    { id:"t-1004", clientId:"c-srima", createdBy:"cu-5", subject:"Domain renewal reminder — expiring in 10 days", description:"Got an email saying our domain expires soon, please handle renewal.", category:"Domain / Hosting", priority:"High", status:"Assigned", assignedTo:"ankit", assignedBy:"system", createdAt:daysAgo(1), assignedAt:daysAgo(1), pageUrl:"srimadiagnostic.com", comments:[
+        {author:"Dr. Srima Rao", role:"client", text:"Please make sure this doesn't lapse, it's urgent for us.", at:daysAgo(1)}
+    ]},
+    { id:"t-1005", clientId:"c-sriram", createdBy:"cu-7", subject:"Add new Diwali collection photos", description:"Need 20 new product photos added to the collections page before the festive season.", category:"Design Change", priority:"Medium", status:"New", assignedTo:"bhuvanesh", assignedBy:"system", createdAt:daysAgo(0.3), assignedAt:daysAgo(0.3), pageUrl:"sriramgifts.com/collections", comments:[]},
+    { id:"t-1006", clientId:"c-shibpur", createdBy:"cu-8", subject:"Contact page email not receiving enquiries", description:"Parents say they've submitted the enquiry form but school office has not received a single email in 2 weeks.", category:"Email", priority:"Urgent", status:"Closed", assignedTo:"chandan", assignedBy:"system", createdAt:daysAgo(14), assignedAt:daysAgo(14), resolvedAt:daysAgo(13), pageUrl:"shghschool.edu.in/contact", comments:[
+        {author:"Anjali Bose", role:"client", text:"No enquiry emails coming through, please check urgently.", at:daysAgo(14)},
+        {author:"Chandan Jha", role:"internal", text:"Found it — form was pointing to an old email address. Fixed and tested.", at:daysAgo(13.2)},
+        {author:"Anjali Bose", role:"client", text:"Confirmed, receiving them now. Thank you!", at:daysAgo(13)}
+    ]},
+    { id:"t-1007", clientId:"c-pavmantra", createdBy:"cu-2", subject:"Add Instagram feed to homepage", description:"Would like our latest Instagram posts to show up on the homepage automatically.", category:"General Request", priority:"Low", status:"New", assignedTo:"irfan", assignedBy:"system", createdAt:daysAgo(0.1), assignedAt:daysAgo(0.1), pageUrl:"pavmantra.com", comments:[]}
+  ];
+  saveKey("tickets", tickets);
+
+  const meetings = [
+    { id:"m-1", clientId:"c-srima", title:"Client Website Review", date:"2026-08-14", attendees:["ankit","bhuvanesh"], notes:"Reviewed homepage redesign, contact form reliability, and SEO improvements for the diagnostic centre site.", decisions:"Proceed with homepage redesign; move contact form to a monitored inbox; start basic on-page SEO next sprint.", actionItems:[
+        {task:"Fix contact form reliability", owner:"ankit", due:"2026-08-20", done:true},
+        {task:"Review site architecture for SEO", owner:"chandan", due:"2026-08-24", done:false},
+        {task:"Confirm new homepage content with client", owner:"bhuvanesh", due:"2026-08-22", done:false}
+    ]},
+    { id:"m-2", clientId:null, title:"Weekly Internal Sync", date:"2026-08-17", attendees:["ankit","chandan","bhuvanesh","irfan"], notes:"Reviewed open ticket load across clients, flagged Srima domain renewal as time-sensitive.", decisions:"Ankit to personally handle domain renewals going forward.", actionItems:[
+        {task:"Set calendar reminders for all client domain renewals", owner:"ankit", due:"2026-08-25", done:false}
+    ]}
+  ];
+  saveKey("meetings", meetings);
+
+  const vault = [
+    { id:"v-1", service:"GoDaddy — Domain Registrar", category:"Domain & Hosting", username:"support@thikaana.co", password:"Demo-Only-Not-Real", url:"godaddy.com", notes:"Renews annually.", updatedAt:daysAgo(20) },
+    { id:"v-2", service:"Google Workspace Admin", category:"Google Workspace", username:"support@thikaana.co", password:"Demo-Only-Not-Real", url:"admin.google.com", notes:"", updatedAt:daysAgo(15) }
+  ];
+  saveKey("vault", vault);
+
+  const expenses = [
+    { id:"e-1", date:"2026-08-05", category:"Domain & Hosting", description:"Domain renewal — thikaana.co", amount:1200, paidBy:"ankit", notes:"" },
+    { id:"e-2", date:"2026-08-10", category:"Software & Subscriptions", description:"Design tool subscription", amount:1999, paidBy:"chandan", notes:"" },
+    { id:"e-3", date:"2026-08-15", category:"Marketing & Ads", description:"Instagram ad boost", amount:3000, paidBy:"bhuvanesh", notes:"" }
+  ];
+  saveKey("expenses", expenses);
+
+  saveKey("audit", []);
+  logAudit("Seed", "System", "Demo data seeded", "system");
+}
+
+/* ---------------- Audit logging ---------------- */
+function logAudit(action, module, summary, performedByOverride, prevVal, newVal){
+  const logs = loadKey("audit") || [];
+  logs.unshift({
+    id: uid(),
+    action, module, summary,
+    performedBy: performedByOverride || currentActor(),
+    prevVal: prevVal || "", newVal: newVal || "",
+    at: new Date().toISOString()
+  });
+  saveKey("audit", logs.slice(0, 300));
+}
+function currentActor(){ const id = sessionStorage.getItem("thikwork_actor") || "ankit"; return teamName(id); }
+function currentActorId(){ return sessionStorage.getItem("thikwork_actor") || "ankit"; }
+
+/* ---------------- Ticket assignment ---------------- */
+function nextAssignee(category){
+  const isTech = TECHNICAL_CATEGORIES.includes(category);
+  const pool = TEAM.filter(t => t.type === (isTech ? "technical" : "nontechnical")).map(t=>t.id);
+  const rrKey = "thikwork_rr_" + (isTech?"tech":"nontech");
+  let idx = parseInt(sessionStorage.getItem(rrKey) || "0", 10);
+  const chosen = pool[idx % pool.length];
+  sessionStorage.setItem(rrKey, String(idx+1));
+  return chosen;
+}
+
+/* ================= AUTH ================= */
+function attemptLogin(){
+  const u = document.getElementById("login-user").value.trim().toLowerCase();
+  const p = document.getElementById("login-pass").value;
+  if(u === AUTH.username && p === AUTH.password){
+    sessionStorage.setItem("thikwork_session","1");
+    if(!sessionStorage.getItem("thikwork_actor")) sessionStorage.setItem("thikwork_actor","ankit");
+    showApp();
+  } else {
+    document.getElementById("login-error").textContent = "Incorrect email or password.";
+  }
+}
+document.getElementById("login-pass").addEventListener("keydown", e => { if(e.key==="Enter") attemptLogin(); });
+document.getElementById("login-user").addEventListener("keydown", e => { if(e.key==="Enter") attemptLogin(); });
+
+function logout(){
+  sessionStorage.removeItem("thikwork_session");
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("login-user").value=""; document.getElementById("login-pass").value="";
+}
+function showApp(){
+  seedIfEmpty();
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  const sel = document.getElementById("acting-as-select");
+  sel.innerHTML = TEAM.map(t=>`<option value="${t.id}">${t.name}</option>`).join("");
+  sel.value = currentActorId();
+  switchTab("dashboard");
+}
+function setActingAs(id){ sessionStorage.setItem("thikwork_actor", id); if(currentTab) switchTab(currentTab); }
+
+/* ================= TABS ================= */
+let currentTab = "dashboard";
+let currentClientId = null;
+let currentTicketId = null;
+function switchTab(tab){
+  currentTab = tab; currentClientId = null; currentTicketId = null;
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===tab));
+  render();
+}
+function render(){
+  const renderers = { dashboard:renderDashboard, vault:renderVault, expenses:renderExpenses, clients:renderClients, meetings:renderMeetings, team:renderTeam, tickets:renderTickets, audit:renderAudit };
+  (renderers[currentTab]||renderDashboard)();
+}
+
+function openModal(html, wide){ document.getElementById("modal-body").className = "modal" + (wide?" wide":""); document.getElementById("modal-body").innerHTML = html; document.getElementById("overlay").classList.add("open"); }
+function closeModal(){ document.getElementById("overlay").classList.remove("open"); document.getElementById("modal-body").innerHTML=""; }
+document.getElementById("overlay").addEventListener("click", e => { if(e.target.id==="overlay") closeModal(); });
+
+/* ================= DASHBOARD ================= */
+function priorityPill(p){ return {Low:"gray",Medium:"blue",High:"orange",Urgent:"red"}[p]||"gray"; }
+function statusPill(s){ return {New:"blue","Assigned":"yellow","In Progress":"orange","Waiting for Client":"gray",Resolved:"green",Closed:"gray"}[s]||"gray"; }
+
+function renderDashboard(){
+  const clients = loadKey("clients")||[], tickets = loadKey("tickets")||[], expenses = loadKey("expenses")||[], meetings = loadKey("meetings")||[], vault = loadKey("vault")||[];
+  const now = new Date(); const ym = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  const monthTotal = expenses.filter(e=>e.date && e.date.startsWith(ym)).reduce((s,e)=>s+Number(e.amount||0),0);
+  const activeClients = clients.filter(c=>c.status==="Active").length;
+  const openStatuses = ["New","Assigned","In Progress","Waiting for Client"];
+  const openTickets = tickets.filter(t=>openStatuses.includes(t.status));
+  const urgentTickets = tickets.filter(t=>t.priority==="Urgent" && openStatuses.includes(t.status));
+  const statusCounts = {}; TICKET_STATUSES.forEach(s=>statusCounts[s]=tickets.filter(t=>t.status===s).length);
+  const priorityCounts = {}; TICKET_PRIORITIES.forEach(p=>priorityCounts[p]=tickets.filter(t=>t.priority===p && openStatuses.includes(t.status)).length);
+  const recentMeetings = meetings.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,3);
+  const auditLog = (loadKey("audit")||[]).slice(0,8);
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Dashboard</h2><p>Thikaana Workspace overview</p></div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total Clients</div><div class="value">${clients.length}</div></div>
+      <div class="stat-card"><div class="label">Active Clients</div><div class="value">${activeClients}</div></div>
+      <div class="stat-card"><div class="label">Open Tickets</div><div class="value">${openTickets.length}</div></div>
+      <div class="stat-card"><div class="label">Urgent Tickets</div><div class="value" style="color:var(--danger)">${urgentTickets.length}</div></div>
+      <div class="stat-card"><div class="label">Expenses This Month</div><div class="value small">${fmtMoney(monthTotal)}</div></div>
+      <div class="stat-card"><div class="label">Vault Items</div><div class="value">${vault.length}</div></div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <h3>Ticket Summary</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${TICKET_STATUSES.map(s=>`<span class="pill ${statusPill(s)}">${s} · ${statusCounts[s]}</span>`).join("")}
+          </div>
+        </div>
+        <div class="card">
+          <h3>Open Tickets by Priority</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${TICKET_PRIORITIES.map(p=>`<span class="pill ${priorityPill(p)}">${p} · ${priorityCounts[p]}</span>`).join("")}
+          </div>
+        </div>
+        <div class="card">
+          <h3>Recent Activity</h3>
+          ${auditLog.length ? auditLog.map(a=>`
+            <div style="padding:7px 0;border-bottom:1px solid #f0f1f5;font-size:12.5px;">
+              <b>${escapeHtml(a.summary)}</b><br>
+              <span style="color:var(--muted);">${escapeHtml(a.performedBy)} · ${fmtDateTime(a.at)}</span>
+            </div>`).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No activity yet.</p>`}
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Team</h3>
+          ${TEAM.map(t=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0;"><div class="avatar">${initials(t.name)}</div><div><div style="font-size:13px;font-weight:600;">${t.name}</div><div style="font-size:11.5px;color:var(--muted);">${t.role}</div></div></div>`).join("")}
+        </div>
+        <div class="card">
+          <h3>Recent Meetings</h3>
+          ${recentMeetings.length ? recentMeetings.map(m=>{
+            const client = clients.find(c=>c.id===m.clientId);
+            return `<div style="padding:7px 0;border-bottom:1px solid #f0f1f5;">
+              <div style="font-size:13px;font-weight:600;">${escapeHtml(m.title)}</div>
+              <div style="font-size:11.5px;color:var(--muted);">${fmtDate(m.date)}${client?" · "+escapeHtml(client.name):""}</div>
+            </div>`;
+          }).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No meetings logged yet.</p>`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ================= TICKETS ================= */
+function renderTickets(){
+  if(currentTicketId){ renderTicketDetail(currentTicketId); return; }
+  const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
+  const statusFilter = document.getElementById("tk-status")?.value || "";
+  const priorityFilter = document.getElementById("tk-priority")?.value || "";
+  const search = (document.getElementById("tk-search")?.value || "").toLowerCase();
+  const sorted = tickets.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  const filtered = sorted.filter(t=>{
+    if(statusFilter && t.status!==statusFilter) return false;
+    if(priorityFilter && t.priority!==priorityFilter) return false;
+    if(search){ const client = clients.find(c=>c.id===t.clientId); if(!(t.subject+t.id+(client?client.name:"")).toLowerCase().includes(search)) return false; }
+    return true;
+  });
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Tickets</h2><p>All client requests across every account</p></div>
+      <button class="btn" onclick="openTicketForm()">+ New Ticket</button>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="tk-search" placeholder="Search subject, ID or client..." class="grow" oninput="renderTickets()">
+      <select id="tk-status" onchange="renderTickets()"><option value="">All statuses</option>${TICKET_STATUSES.map(s=>`<option ${s===statusFilter?"selected":""}>${s}</option>`).join("")}</select>
+      <select id="tk-priority" onchange="renderTickets()"><option value="">All priorities</option>${TICKET_PRIORITIES.map(p=>`<option ${p===priorityFilter?"selected":""}>${p}</option>`).join("")}</select>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>ID</th><th>Subject</th><th>Client</th><th>Category</th><th>Priority</th><th>Status</th><th>Assigned</th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(t=>{
+          const client = clients.find(c=>c.id===t.clientId);
+          return `<tr class="clickable" onclick="openTicketDetail('${t.id}')">
+            <td class="mono">${t.id}</td>
+            <td><b>${escapeHtml(t.subject)}</b></td>
+            <td>${client?escapeHtml(client.name):"—"}</td>
+            <td>${escapeHtml(t.category)}</td>
+            <td><span class="pill ${priorityPill(t.priority)}">${t.priority}</span></td>
+            <td><span class="pill ${statusPill(t.status)}">${t.status}</span></td>
+            <td>${teamName(t.assignedTo)}</td>
+          </tr>`;
+        }).join("") : `<tr><td colspan="7" class="empty-row">No tickets match this filter.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+
+function openTicketDetail(id){ currentTicketId = id; currentClientId = null; goToTab("tickets"); }
+function renderTicketDetail(id){
+  const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
+  const t = tickets.find(x=>x.id===id);
+  if(!t){ currentTicketId=null; renderTickets(); return; }
+  const client = clients.find(c=>c.id===t.clientId);
+
+  document.getElementById("main-content").innerHTML = `
+    <span class="back-link" onclick="currentTicketId=null;render();">&larr; Back to Tickets</span>
+    <div class="topbar">
+      <div>
+        <h2>${escapeHtml(t.subject)}</h2>
+        <p class="mono">${t.id} · ${client?escapeHtml(client.name):"—"} · opened ${fmtDateTime(t.createdAt)}</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <span class="pill ${priorityPill(t.priority)}">${t.priority}</span>
+        <span class="pill ${statusPill(t.status)}">${t.status}</span>
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <h3>Description</h3>
+          <p style="font-size:13.5px;line-height:1.6;margin:0 0 8px;">${escapeHtml(t.description)}</p>
+          <div style="font-size:12px;color:var(--muted);">Category: ${escapeHtml(t.category)} ${t.pageUrl?(" · Page: "+escapeHtml(t.pageUrl)):""}</div>
+        </div>
+        <div class="card">
+          <h3>Conversation</h3>
+          <div id="comment-thread">
+            ${t.comments.length ? t.comments.map(c=>`
+              <div class="comment ${c.role==='client'?'client':''}">
+                <div class="avatar">${initials(c.author)}</div>
+                <div class="bubble">
+                  <div class="meta"><b>${escapeHtml(c.author)}</b> · ${c.role==='client'?'Client':'Thikaana'} · ${fmtDateTime(c.at)}</div>
+                  <div class="text">${escapeHtml(c.text)}</div>
+                </div>
+              </div>`).join("") : `<p style="color:var(--muted);font-size:13px;">No messages yet.</p>`}
+          </div>
+          <div class="field" style="margin-top:14px;">
+            <label>Reply as ${escapeHtml(currentActor())}</label>
+            <textarea id="reply-text" placeholder="Type a reply..."></textarea>
+          </div>
+          <button class="btn small" onclick="postReply('${t.id}')">Send Reply</button>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Ticket Details</h3>
+          <div class="field"><label>Status</label>
+            <select id="tk-status-edit" onchange="updateTicketStatus('${t.id}', this.value)">${TICKET_STATUSES.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select>
+          </div>
+          <div class="field"><label>Assigned to</label>
+            <select id="tk-assignee-edit" onchange="reassignTicket('${t.id}', this.value)">${teamOptions(t.assignedTo)}</select>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;">
+            Assigned: ${fmtDateTime(t.assignedAt)}<br>
+            ${t.resolvedAt?("Resolved: "+fmtDateTime(t.resolvedAt)+"<br>"):""}
+            Created by: ${(loadKey("clientUsers")||[]).find(u=>u.id===t.createdBy)?.name || "—"}
+          </div>
+        </div>
+        ${client?`<div class="card">
+          <h3>Client</h3>
+          <div style="font-size:13.5px;font-weight:600;">${escapeHtml(client.name)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${escapeHtml(client.company)}</div>
+          <button class="btn secondary small" onclick="openClientProfile('${client.id}')">View Client Profile</button>
+        </div>`:""}
+      </div>
+    </div>
+  `;
+}
+function postReply(ticketId){
+  const text = document.getElementById("reply-text").value.trim();
+  if(!text) return;
+  const tickets = loadKey("tickets")||[];
+  const t = tickets.find(x=>x.id===ticketId);
+  t.comments.push({ author: currentActor(), role:"internal", text, at:new Date().toISOString() });
+  if(t.status==="New") t.status="Assigned";
+  if(t.status==="Assigned") t.status="In Progress";
+  saveKey("tickets", tickets);
+  logAudit("Comment Added","Tickets",`Replied on ${ticketId}: "${text.slice(0,50)}${text.length>50?"…":""}"`);
+  renderTicketDetail(ticketId);
+}
+function updateTicketStatus(ticketId, newStatus){
+  const tickets = loadKey("tickets")||[];
+  const t = tickets.find(x=>x.id===ticketId);
+  const old = t.status; t.status = newStatus;
+  if(newStatus==="Resolved" && !t.resolvedAt) t.resolvedAt = new Date().toISOString();
+  saveKey("tickets", tickets);
+  logAudit("Status Changed","Tickets",`${ticketId} status changed`,null,old,newStatus);
+  renderTicketDetail(ticketId);
+}
+function reassignTicket(ticketId, newAssignee){
+  const tickets = loadKey("tickets")||[];
+  const t = tickets.find(x=>x.id===ticketId);
+  const old = teamName(t.assignedTo); t.assignedTo = newAssignee;
+  saveKey("tickets", tickets);
+  logAudit("Reassigned","Tickets",`${ticketId} reassigned`,null,old,teamName(newAssignee));
+  renderTicketDetail(ticketId);
+}
+function openTicketForm(){
+  const clients = loadKey("clients")||[];
+  openModal(`
+    <h3>New Ticket</h3>
+    <div class="field"><label>Client *</label><select id="f-client">${clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Subject *</label><input type="text" id="f-subject"></div>
+    <div class="field-row">
+      <div class="field"><label>Category</label><select id="f-category">${TICKET_CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>Priority</label><select id="f-priority">${TICKET_PRIORITIES.map(p=>`<option ${p==="Medium"?"selected":""}>${p}</option>`).join("")}</select></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="f-description"></textarea></div>
+    <div class="field"><label>Page / URL</label><input type="text" id="f-pageurl" placeholder="optional"></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveTicket()">Create Ticket</button></div>
+  `);
+}
+function saveTicket(){
+  const subject = document.getElementById("f-subject").value.trim();
+  if(!subject){ alert("Subject is required."); return; }
+  const category = document.getElementById("f-category").value;
+  const assignedTo = nextAssignee(category);
+  const tickets = loadKey("tickets")||[];
+  const id = "t-"+(1000+tickets.length+1);
+  const record = {
+    id, clientId: document.getElementById("f-client").value,
+    createdBy: null, subject,
+    description: document.getElementById("f-description").value.trim(),
+    category, priority: document.getElementById("f-priority").value,
+    status: "Assigned", assignedTo, assignedBy:"system",
+    createdAt: new Date().toISOString(), assignedAt: new Date().toISOString(),
+    pageUrl: document.getElementById("f-pageurl").value.trim(), comments: []
+  };
+  tickets.push(record); saveKey("tickets", tickets);
+  logAudit("Ticket Created","Tickets",`${id}: "${subject}" — auto-assigned to ${teamName(assignedTo)}`);
+  closeModal(); renderTickets();
+}
+
+/* ================= CLIENTS ================= */
+function statusPillClass(s){ return {Active:"green",Lead:"blue",Prospect:"blue",Completed:"gray","On Hold":"yellow",Inactive:"red"}[s] || "gray"; }
+function renderClients(){
+  if(currentClientId){ renderClientProfile(currentClientId); return; }
+  const items = loadKey("clients")||[];
+  const search = (document.getElementById("client-search")?.value || "").toLowerCase();
+  const statusFilter = document.getElementById("client-status")?.value || "";
+  const filtered = items.filter(c => (!search || (c.name+c.company).toLowerCase().includes(search)) && (!statusFilter || c.status===statusFilter));
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar">
+      <div><h2>Clients</h2><p>Every account we manage</p></div>
+      <button class="btn" onclick="openClientForm()">+ Add Client</button>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="client-search" placeholder="Search clients..." class="grow" oninput="renderClients()">
+      <select id="client-status" onchange="renderClients()"><option value="">All statuses</option>${CLIENT_STATUSES.map(s=>`<option ${s===statusFilter?"selected":""}>${s}</option>`).join("")}</select>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Client</th><th>Status</th><th>Website</th><th>Deal Value</th><th>Open Tickets</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(c=>{
+          const tickets = (loadKey("tickets")||[]).filter(t=>t.clientId===c.id);
+          const open = tickets.filter(t=>!["Resolved","Closed"].includes(t.status)).length;
+          return `<tr class="clickable" onclick="openClientProfile('${c.id}')">
+            <td><b>${escapeHtml(c.name)}</b><br><span style="color:var(--muted);font-size:12px;">${escapeHtml(c.company)}</span></td>
+            <td><span class="pill ${statusPillClass(c.status)}">${escapeHtml(c.status)}</span></td>
+            <td style="font-size:12px;">${escapeHtml(c.website)}</td>
+            <td>${fmtMoney(c.dealValue)}</td>
+            <td>${open}</td>
+            <td class="row-actions" onclick="event.stopPropagation();">
+              <button class="icon-btn" onclick="openClientForm('${c.id}')">Edit</button>
+            </td>
+          </tr>`;
+        }).join("") : `<tr><td colspan="6" class="empty-row">No clients yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function openClientProfile(id){ currentClientId = id; currentTicketId = null; goToTab("clients"); }
+function goToTab(tab){
+  currentTab = tab;
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===tab));
+  render();
+}
+function renderClientProfile(id){
+  const clients = loadKey("clients")||[];
+  const c = clients.find(x=>x.id===id);
+  if(!c){ currentClientId=null; renderClients(); return; }
+  const users = (loadKey("clientUsers")||[]).filter(u=>u.clientId===id);
+  const tickets = (loadKey("tickets")||[]).filter(t=>t.clientId===id).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  const open = tickets.filter(t=>!["Resolved","Closed"].includes(t.status));
+  const closed = tickets.filter(t=>["Resolved","Closed"].includes(t.status));
+  const meetings = (loadKey("meetings")||[]).filter(m=>m.clientId===id);
+
+  document.getElementById("main-content").innerHTML = `
+    <span class="back-link" onclick="currentClientId=null;render();">&larr; Back to Clients</span>
+    <div class="profile-header">
+      <div>
+        <h2 style="margin:0 0 4px;">${escapeHtml(c.name)}</h2>
+        <p style="margin:0;color:var(--muted);">${escapeHtml(c.company)} · <span class="pill ${statusPillClass(c.status)}">${escapeHtml(c.status)}</span></p>
+        <div class="profile-stats">
+          <div><b>${fmtMoney(c.dealValue)}</b>Deal Value</div>
+          <div><b>${users.length}</b>Users</div>
+          <div><b>${open.length}</b>Open Tickets</div>
+          <div><b>${closed.length}</b>Closed Tickets</div>
+        </div>
+      </div>
+      <button class="btn secondary small" onclick="openClientForm('${c.id}')">Edit Client</button>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <h3>Tickets</h3>
+          <table><thead><tr><th>ID</th><th>Subject</th><th>Priority</th><th>Status</th></tr></thead><tbody>
+            ${tickets.length ? tickets.map(t=>`<tr class="clickable" onclick="currentClientId=null;openTicketDetail('${t.id}');"><td class="mono">${t.id}</td><td>${escapeHtml(t.subject)}</td><td><span class="pill ${priorityPill(t.priority)}">${t.priority}</span></td><td><span class="pill ${statusPill(t.status)}">${t.status}</span></td></tr>`).join("") : `<tr><td colspan="4" class="empty-row">No tickets yet.</td></tr>`}
+          </tbody></table>
+        </div>
+        <div class="card">
+          <h3>Meeting History</h3>
+          ${meetings.length ? meetings.map(m=>`<div style="padding:7px 0;border-bottom:1px solid #f0f1f5;"><b style="font-size:13px;">${escapeHtml(m.title)}</b><br><span style="font-size:11.5px;color:var(--muted);">${fmtDate(m.date)}</span></div>`).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No meetings logged for this client.</p>`}
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Contact</h3>
+          <div style="font-size:13px;line-height:1.9;">
+            Website: ${escapeHtml(c.website)}<br>
+            Email: ${escapeHtml(c.email)}<br>
+            Phone: ${escapeHtml(c.phone)}<br>
+            Start date: ${fmtDate(c.startDate)}
+          </div>
+        </div>
+        <div class="card">
+          <h3>Client Users</h3>
+          ${users.map(u=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0;"><div class="avatar">${initials(u.name)}</div><div><div style="font-size:13px;font-weight:600;">${escapeHtml(u.name)}</div><div style="font-size:11.5px;color:var(--muted);">${escapeHtml(u.role)} · ${escapeHtml(u.email)}</div></div></div>`).join("") || `<p style="color:var(--muted);font-size:13px;margin:0;">No portal users yet.</p>`}
+        </div>
+        <div class="card">
+          <h3>Notes</h3>
+          <p style="font-size:13px;line-height:1.6;margin:0;">${escapeHtml(c.notes||"—")}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function openClientForm(id){
+  const items = loadKey("clients")||[];
+  const item = items.find(i=>i.id===id) || {};
+  openModal(`
+    <h3>${id?"Edit":"Add"} Client</h3>
+    <div class="field-row">
+      <div class="field"><label>Client Name *</label><input type="text" id="f-name" value="${escapeHtml(item.name||"")}"></div>
+      <div class="field"><label>Company</label><input type="text" id="f-company" value="${escapeHtml(item.company||"")}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Email</label><input type="text" id="f-email" value="${escapeHtml(item.email||"")}"></div>
+      <div class="field"><label>Phone</label><input type="text" id="f-phone" value="${escapeHtml(item.phone||"")}"></div>
+    </div>
+    <div class="field"><label>Website</label><input type="text" id="f-website" value="${escapeHtml(item.website||"")}"></div>
+    <div class="field-row">
+      <div class="field"><label>Status</label><select id="f-status">${CLIENT_STATUSES.map(s=>`<option ${s===item.status?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="field"><label>Deal Value (₹)</label><input type="number" id="f-value" value="${item.dealValue||""}"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveClient('${id||""}')">Save</button></div>
+  `);
+}
+function saveClient(id){
+  const name = document.getElementById("f-name").value.trim();
+  if(!name){ alert("Client name is required."); return; }
+  const items = loadKey("clients")||[];
+  const existing = items.find(i=>i.id===id);
+  const record = {
+    id: id || uid(), name,
+    company: document.getElementById("f-company").value.trim(),
+    email: document.getElementById("f-email").value.trim(),
+    phone: document.getElementById("f-phone").value.trim(),
+    website: document.getElementById("f-website").value.trim(),
+    status: document.getElementById("f-status").value,
+    dealValue: document.getElementById("f-value").value,
+    notes: document.getElementById("f-notes").value.trim(),
+    startDate: existing ? existing.startDate : new Date().toISOString().slice(0,10)
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  saveKey("clients", items);
+  logAudit(id?"Client Updated":"Client Added","Clients", name);
+  closeModal(); renderClients();
+}
+
+/* ================= VAULT ================= */
+function renderVault(){
+  const items = loadKey("vault")||[];
+  const search = (document.getElementById("vault-search")?.value || "").toLowerCase();
+  const filtered = items.filter(i => !search || (i.service+i.username+i.category).toLowerCase().includes(search));
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Vault</h2><p>Credentials the business depends on</p></div><button class="btn" onclick="openVaultForm()">+ Add Credential</button></div>
+    <div class="toolbar"><input type="search" id="vault-search" placeholder="Search..." class="grow" oninput="renderVault()"></div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Service</th><th>Category</th><th>Username</th><th>Password</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(i => `
+          <tr>
+            <td><b>${escapeHtml(i.service)}</b></td>
+            <td><span class="pill blue">${escapeHtml(i.category)}</span></td>
+            <td>${escapeHtml(i.username)}</td>
+            <td><div class="pw-cell"><span class="mono" id="pw-${i.id}" data-pw="${escapeHtml(i.password)}">••••••••</span><button class="icon-btn" onclick="togglePw('${i.id}')">Show</button></div></td>
+            <td style="color:var(--muted);font-size:12.5px;">${escapeHtml(i.notes||"—")}</td>
+            <td class="row-actions"><button class="icon-btn" onclick="openVaultForm('${i.id}')">Edit</button><button class="icon-btn" onclick="deleteItem('vault','${i.id}')">Delete</button></td>
+          </tr>`).join("") : `<tr><td colspan="6" class="empty-row">No credentials saved yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function togglePw(id){
+  const el = document.getElementById("pw-"+id); const btn = el.nextElementSibling;
+  if(el.textContent.includes("•")){ el.textContent = el.dataset.pw; btn.textContent="Hide"; } else { el.textContent = "••••••••"; btn.textContent="Show"; }
+}
+function openVaultForm(id){
+  const items = loadKey("vault")||[]; const item = items.find(i=>i.id===id) || {};
+  openModal(`
+    <h3>${id?"Edit":"Add"} Credential</h3>
+    <div class="field"><label>Service *</label><input type="text" id="f-service" value="${escapeHtml(item.service||"")}"></div>
+    <div class="field-row">
+      <div class="field"><label>Category</label><select id="f-category">${VAULT_CATEGORIES.map(c=>`<option ${c===item.category?"selected":""}>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>URL</label><input type="text" id="f-url" value="${escapeHtml(item.url||"")}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Username *</label><input type="text" id="f-username" value="${escapeHtml(item.username||"")}"></div>
+      <div class="field"><label>Password *</label><input type="text" id="f-password" value="${escapeHtml(item.password||"")}"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveVault('${id||""}')">Save</button></div>
+  `);
+}
+function saveVault(id){
+  const service = document.getElementById("f-service").value.trim();
+  const username = document.getElementById("f-username").value.trim();
+  const password = document.getElementById("f-password").value;
+  if(!service || !username || !password){ alert("Service, username and password are required."); return; }
+  const items = loadKey("vault")||[];
+  const record = { id: id || uid(), service, username, password, category: document.getElementById("f-category").value, url: document.getElementById("f-url").value.trim(), notes: document.getElementById("f-notes").value.trim(), updatedAt: new Date().toISOString() };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  saveKey("vault", items);
+  logAudit(id?"Vault Updated":"Vault Added","Vault", service);
+  closeModal(); renderVault();
+}
+
+/* ================= EXPENSES ================= */
+function renderExpenses(){
+  const items = (loadKey("expenses")||[]).slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  const monthFilter = document.getElementById("exp-month")?.value || "";
+  const filtered = monthFilter ? items.filter(e=>e.date && e.date.startsWith(monthFilter)) : items;
+  const total = filtered.reduce((s,e)=>s+Number(e.amount||0),0);
+  const byCategory = {}; filtered.forEach(e => { byCategory[e.category] = (byCategory[e.category]||0) + Number(e.amount||0); });
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Expenses</h2><p>Business spending</p></div><button class="btn" onclick="openExpenseForm()">+ Add Expense</button></div>
+    <div class="stat-grid"><div class="stat-card"><div class="label">Total</div><div class="value">${fmtMoney(total)}</div></div><div class="stat-card"><div class="label">Entries</div><div class="value">${filtered.length}</div></div></div>
+    ${Object.keys(byCategory).length?`<div class="card"><h3>By Category</h3>${Object.entries(byCategory).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f0f1f5;"><span>${escapeHtml(c)}</span><b>${fmtMoney(v)}</b></div>`).join("")}</div>`:""}
+    <div class="toolbar"><label style="font-size:12.5px;color:var(--muted);">Month:</label><input type="month" id="exp-month" value="${monthFilter}" onchange="renderExpenses()">${monthFilter?`<button class="btn secondary small" onclick="document.getElementById('exp-month').value='';renderExpenses();">Clear</button>`:""}</div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid By</th><th></th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(e => `<tr><td>${fmtDate(e.date)}</td><td><span class="pill gray">${escapeHtml(e.category)}</span></td><td>${escapeHtml(e.description)}</td><td><b>${fmtMoney(e.amount)}</b></td><td>${teamName(e.paidBy)}</td><td class="row-actions"><button class="icon-btn" onclick="openExpenseForm('${e.id}')">Edit</button><button class="icon-btn" onclick="deleteItem('expenses','${e.id}')">Delete</button></td></tr>`).join("") : `<tr><td colspan="6" class="empty-row">No expenses recorded yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+function openExpenseForm(id){
+  const items = loadKey("expenses")||[]; const item = items.find(i=>i.id===id) || { date: new Date().toISOString().slice(0,10) };
+  openModal(`
+    <h3>${id?"Edit":"Add"} Expense</h3>
+    <div class="field-row"><div class="field"><label>Date *</label><input type="date" id="f-date" value="${item.date||""}"></div><div class="field"><label>Amount (₹) *</label><input type="number" id="f-amount" value="${item.amount||""}"></div></div>
+    <div class="field"><label>Category</label><select id="f-category">${EXPENSE_CATEGORIES.map(c=>`<option ${c===item.category?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="field"><label>Description *</label><input type="text" id="f-description" value="${escapeHtml(item.description||"")}"></div>
+    <div class="field"><label>Paid By</label><select id="f-paidby">${teamOptions(item.paidBy)}</select></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(item.notes||"")}</textarea></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveExpense('${id||""}')">Save</button></div>
+  `);
+}
+function saveExpense(id){
+  const date = document.getElementById("f-date").value, amount = document.getElementById("f-amount").value, description = document.getElementById("f-description").value.trim();
+  if(!date || !amount || !description){ alert("Date, amount and description are required."); return; }
+  const items = loadKey("expenses")||[];
+  const record = { id: id || uid(), date, amount: Number(amount), description, category: document.getElementById("f-category").value, paidBy: document.getElementById("f-paidby").value, notes: document.getElementById("f-notes").value.trim() };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>-1) items[idx]=record; else items.push(record);
+  saveKey("expenses", items);
+  logAudit(id?"Expense Updated":"Expense Added","Expenses", `${description} — ${fmtMoney(record.amount)}`);
+  closeModal(); renderExpenses();
+}
+
+/* ================= MEETINGS ================= */
+function renderMeetings(){
+  const items = (loadKey("meetings")||[]).slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  const clients = loadKey("clients")||[];
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Meeting Notes</h2><p>What we discussed and decided</p></div><button class="btn" onclick="openMeetingForm()">+ Log Meeting</button></div>
+    ${items.length ? items.map(m => {
+      const client = clients.find(c=>c.id===m.clientId);
+      return `<div class="card">
+        <h3 style="margin-bottom:4px;">${escapeHtml(m.title)}</h3>
+        <p style="margin:0 0 10px;color:var(--muted);font-size:12.5px;">${fmtDate(m.date)}${client?" · "+escapeHtml(client.name):""} · ${(m.attendees||[]).map(teamName).join(", ")}</p>
+        ${m.notes?`<p style="font-size:13.5px;white-space:pre-wrap;margin:0 0 10px;"><b>Discussion:</b><br>${escapeHtml(m.notes)}</p>`:""}
+        ${m.decisions?`<p style="font-size:13.5px;white-space:pre-wrap;margin:0 0 10px;"><b>Decisions:</b><br>${escapeHtml(m.decisions)}</p>`:""}
+        ${(m.actionItems&&m.actionItems.length)?`<b style="font-size:13.5px;">Action Items:</b><table style="margin-top:6px;"><thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>${m.actionItems.map(a=>`<tr><td>${escapeHtml(a.task)}</td><td>${teamName(a.owner)}</td><td>${a.due?fmtDate(a.due):"—"}</td><td><span class="pill ${a.done?"green":"yellow"}">${a.done?"Done":"Pending"}</span></td></tr>`).join("")}</tbody></table>`:""}
+      </div>`;
+    }).join("") : `<div class="card"><p class="empty-row">No meetings logged yet.</p></div>`}
+  `;
+}
+let tempActionItems = [];
+function openMeetingForm(){
+  const clients = loadKey("clients")||[];
+  tempActionItems = [];
+  openModal(`
+    <h3>Log Meeting</h3>
+    <div class="field-row"><div class="field"><label>Date *</label><input type="date" id="f-date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Title *</label><input type="text" id="f-title"></div></div>
+    <div class="field"><label>Client (optional)</label><select id="f-client"><option value="">Internal only</option>${clients.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")}</select></div>
+    <div class="field"><label>Attendees</label><div class="checkbox-group">${TEAM.map(t=>`<label><input type="checkbox" value="${t.id}" class="attendee-check"> ${t.name}</label>`).join("")}</div></div>
+    <div class="field"><label>Discussion Notes</label><textarea id="f-notes"></textarea></div>
+    <div class="field"><label>Decisions Made</label><textarea id="f-decisions"></textarea></div>
+    <div class="field"><label>Action Items</label><div id="action-items-container"></div><button type="button" class="btn secondary small" onclick="addActionItemRow()">+ Add Action Item</button></div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveMeeting()">Save</button></div>
+  `);
+  renderActionItemRows();
+}
+function renderActionItemRows(){
+  const c = document.getElementById("action-items-container");
+  c.innerHTML = tempActionItems.map((a,idx)=>`<div class="action-item-row"><input type="text" placeholder="Task" value="${escapeHtml(a.task||"")}" onchange="tempActionItems[${idx}].task=this.value"><select onchange="tempActionItems[${idx}].owner=this.value">${teamOptions(a.owner)}</select><input type="date" value="${a.due||""}" onchange="tempActionItems[${idx}].due=this.value"><button type="button" class="icon-btn" onclick="removeActionItemRow(${idx})">✕</button></div>`).join("") || `<p style="color:var(--muted);font-size:12.5px;margin:4px 0;">No action items yet.</p>`;
+}
+function addActionItemRow(){ tempActionItems.push({task:"",owner:TEAM[0].id,due:"",done:false}); renderActionItemRows(); }
+function removeActionItemRow(idx){ tempActionItems.splice(idx,1); renderActionItemRows(); }
+function saveMeeting(){
+  const title = document.getElementById("f-title").value.trim(), date = document.getElementById("f-date").value;
+  if(!title || !date){ alert("Date and title are required."); return; }
+  const items = loadKey("meetings")||[];
+  const record = { id: uid(), date, title, clientId: document.getElementById("f-client").value || null, attendees: Array.from(document.querySelectorAll(".attendee-check:checked")).map(el=>el.value), notes: document.getElementById("f-notes").value.trim(), decisions: document.getElementById("f-decisions").value.trim(), actionItems: tempActionItems.filter(a=>a.task && a.task.trim()) };
+  items.push(record); saveKey("meetings", items);
+  logAudit("Meeting Logged","Meeting Notes", title);
+  closeModal(); renderMeetings();
+}
+
+/* ================= TEAM ================= */
+function renderTeam(){
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Team</h2><p>Internal Thikaana team</p></div></div>
+    <div class="team-grid">
+      ${TEAM.map(t=>`<div class="team-card"><div class="avatar">${initials(t.name)}</div><div><div style="font-weight:700;font-size:14.5px;">${t.name}</div><div style="font-size:12.5px;color:var(--muted);">${t.role}</div><div style="margin-top:4px;"><span class="pill green">Active</span> <span class="pill gray">${t.type==='technical'?'Technical':'Client / Non-Technical'}</span></div></div></div>`).join("")}
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Note</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0;">The whole team currently shares one login (<span class="mono">support@thikaana.co</span>) and identifies themselves via "Acting as" in the sidebar. Individual logins are planned once Google Workspace accounts are live.</p>
+    </div>
+  `;
+}
+
+/* ================= AUDIT LOGS ================= */
+function renderAudit(){
+  const logs = loadKey("audit")||[];
+  const moduleFilter = document.getElementById("audit-module")?.value || "";
+  const modules = [...new Set(logs.map(l=>l.module))];
+  const filtered = moduleFilter ? logs.filter(l=>l.module===moduleFilter) : logs;
+  document.getElementById("main-content").innerHTML = `
+    <div class="topbar"><div><h2>Audit Logs</h2><p>Every recorded action across the workspace</p></div></div>
+    <div class="toolbar"><select id="audit-module" onchange="renderAudit()"><option value="">All modules</option>${modules.map(m=>`<option ${m===moduleFilter?"selected":""}>${m}</option>`).join("")}</select></div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table><thead><tr><th>When</th><th>User</th><th>Action</th><th>Module</th><th>Details</th></tr></thead>
+      <tbody>
+        ${filtered.length ? filtered.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td>${escapeHtml(l.performedBy)}</td><td><span class="pill blue">${escapeHtml(l.action)}</span></td><td>${escapeHtml(l.module)}</td><td style="font-size:12.5px;">${escapeHtml(l.summary)}${l.prevVal?`<br><span style="color:var(--muted);">${escapeHtml(l.prevVal)} &rarr; ${escapeHtml(l.newVal)}</span>`:""}</td></tr>`).join("") : `<tr><td colspan="5" class="empty-row">No audit entries yet.</td></tr>`}
+      </tbody></table>
+    </div>
+  `;
+}
+
+/* ================= SHARED DELETE ================= */
+function deleteItem(key, id){
+  if(!confirm("Delete this entry? This cannot be undone.")) return;
+  const items = (loadKey(key)||[]).filter(i=>i.id!==id);
+  saveKey(key, items);
+  logAudit("Deleted", key.charAt(0).toUpperCase()+key.slice(1), `Removed record ${id}`);
+  render();
+}
+
+/* ---------------- Auto-login (must run after all declarations above) ---------------- */
+if(sessionStorage.getItem("thikwork_session") === "1"){ showApp(); }
+</script>
+</body>
+</html>
