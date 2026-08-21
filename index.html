@@ -248,6 +248,10 @@ const BRAND = "ठिkaana";
 const SHARED_LOGIN = { email: "support@thikaana.co", password: "demo123" };
 const DEMO_PASSWORD = "demo123";
 
+// Static page in this same repo — calls Google Places directly from the browser
+// using a key entered on that page (saved in that page's own localStorage).
+const LEAD_GEN_URL = "leadgen.html";
+
 const SEED_EMPLOYEES = [
   { id:"ankit", name:"Ankit Prakash", email:"ankit@thikaana.co", phone:"+91 98100 00001", title:"Founder", department:"Leadership", role:"Administrator", type:"technical", permissions:"full", active:true },
   { id:"chandan", name:"Chandan Jha", email:"chandan@thikaana.co", phone:"+91 98100 00002", title:"Chief Technology Officer", department:"Technology", role:"CTO", type:"technical", permissions:"full", active:true },
@@ -506,6 +510,7 @@ function buildSidebar(){
       <div class="nav-item nav-sub" data-tab="vault" onclick="goToTab('vault')"><span class="ic">&#128274;</span> Vault</div>
       <div class="nav-item nav-sub" data-tab="expenses" onclick="goToTab('expenses')"><span class="ic">&#8377;</span> Expenses</div>
       <div class="nav-item nav-sub" data-tab="meetings" onclick="goToTab('meetings')"><span class="ic">&#128221;</span> Meeting Notes</div>
+      <div class="nav-item nav-sub" onclick="openLeadGen()" title="Opens the Lead Gen tool"><span class="ic">&#128269;</span> Lead Gen &#8599;</div>
       <div class="nav-item" data-tab="employees" onclick="goToTab('employees')"><span class="ic">&#128101;</span> Employees</div>
       <div class="nav-item" data-tab="history" onclick="goToTab('history')"><span class="ic">&#128203;</span> History</div>
       <div class="nav-item" data-tab="settings" onclick="goToTab('settings')"><span class="ic">&#9881;</span> Settings</div>
@@ -540,14 +545,44 @@ function setMyPresence(val){
   buildSidebar();
 }
 function setActingAs(id){ const s=getSession(); s.actingAs=id; setSession(s); if(currentTab) render(); }
+function openLeadGen(){
+  const win = window.open(LEAD_GEN_URL, "_blank", "noopener");
+  if(!win){
+    alert("Your browser blocked the popup. Allow popups for this site, or open "+LEAD_GEN_URL+" directly.");
+  }
+}
 
 /* ================= TAB ROUTER ================= */
 let currentTab = "dashboard";
 let currentClientId = null, currentClientTab = "overview", currentTicketId = null, currentPriorityFilter = null, currentClientTicketsBack = null;
+
+/* ---------------- Browser back/forward support ---------------- */
+let isRestoringHistory = false;
+function pushHistoryState(){
+  if(isRestoringHistory) return;
+  if(!getSession()) return;
+  const state = { tab: currentTab, clientId: currentClientId, clientTab: currentClientTab, ticketId: currentTicketId, ticketsBack: currentClientTicketsBack, dashViewAsUserId: (typeof dashViewAsUserId!=="undefined"?dashViewAsUserId:null) };
+  try{ history.pushState(state, ""); }catch(e){}
+}
+window.addEventListener("popstate", (e) => {
+  const s = getSession();
+  if(!s) return;
+  isRestoringHistory = true;
+  const st = e.state || { tab: s.type==="employee" ? "dashboard" : "cdashboard" };
+  currentTab = st.tab; currentClientId = st.clientId||null; currentClientTab = st.clientTab||"overview";
+  currentTicketId = st.ticketId||null; currentClientTicketsBack = st.ticketsBack||"tickets";
+  if(typeof dashViewAsUserId!=="undefined") dashViewAsUserId = st.dashViewAsUserId||null;
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentTab));
+  if(currentTicketId && s.type==="employee"){ renderTicketDetailEmployee(currentTicketId); }
+  else { render(); }
+  isRestoringHistory = false;
+});
+
 function goToTab(tab){
   currentTab = tab; currentClientId=null; currentTicketId=null; currentPriorityFilter=null;
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===tab));
   render();
+  pushHistoryState();
 }
 let pendingTicketFilter = null, pendingClientFilter = null;
 function goToTicketsFiltered(filter){ pendingTicketFilter = filter; goToTab("tickets"); }
@@ -709,8 +744,9 @@ function goToClientTab_(){
   currentTab = "clients";
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab==="clients"));
   render();
+  pushHistoryState();
 }
-function setClientTab(tab){ currentClientTab = tab; currentPriorityFilter=null; render(); }
+function setClientTab(tab){ currentClientTab = tab; currentPriorityFilter=null; render(); pushHistoryState(); }
 
 function renderClientProfile(id){
   const clients = loadKey("clients")||[];
@@ -794,7 +830,7 @@ function renderClientProfile(id){
   }
 
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="goToTab('clients')">&larr; Back to Clients</span>
+    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="profile-header">
       <div>
         <h2 style="margin:0 0 4px;">${escapeHtml(c.name)}</h2>
@@ -861,13 +897,13 @@ function renderTickets(){
     </div>
   `;
 }
-function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); animateIn("#main-content"); }
+function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); animateIn("#main-content"); pushHistoryState(); }
 function renderTicketDetailEmployee(id){
   const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
   const t = tickets.find(x=>x.id===id);
   const client = clients.find(c=>c.id===t.clientId);
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="currentTicketId=null;${currentClientTicketsBack==='clients'?`openClientProfile('${t.clientId}');setClientTab('tickets');`:`goToTab('tickets');`}">&larr; Back</span>
+    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="topbar">
       <div><h2>${escapeHtml(t.subject)}</h2><p class="mono">${t.id} · ${client?escapeHtml(client.name):"—"} · opened ${fmtDateTime(t.createdAt)}</p></div>
       <div style="display:flex;gap:8px;"><span class="pill ${priorityPill(t.priority)}">${t.priority}</span><span class="pill ${statusPill(t.status)}">${t.status}</span></div>
@@ -1242,11 +1278,11 @@ function renderClientRequests(){
     </div>
   `;
 }
-function openClientTicketDetail(id){ currentTicketId = id; currentTab = "crequests"; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab==="crequests")); render(); }
+function openClientTicketDetail(id){ currentTicketId = id; currentTab = "crequests"; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab==="crequests")); render(); pushHistoryState(); }
 function renderClientTicketDetail(id){
   const t = (loadKey("tickets")||[]).find(x=>x.id===id);
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="currentTicketId=null;currentPriorityFilter=null;render();">&larr; Back to My Requests</span>
+    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="topbar"><div><h2>${escapeHtml(t.subject)}</h2><p class="mono">${t.id} · opened ${fmtDateTime(t.createdAt)}</p></div><div style="display:flex;gap:8px;"><span class="pill ${priorityPill(t.priority)}">${t.priority}</span><span class="pill ${statusPill(t.status)}">${t.status}</span></div></div>
     <div class="two-col">
       <div>
@@ -1453,6 +1489,7 @@ function renderPackageLandingPage(pkgId, forClientId){
   if(!pkg){ el.innerHTML = `<div style="padding:60px;text-align:center;">Package not found.</div>`; return; }
   el.innerHTML = `
     <div style="max-width:560px;margin:0 auto;padding:60px 20px;">
+      <span class="back-link" onclick="window.location.href=location.pathname">&larr; Back to your account</span>
       <div class="logo-badge" style="margin-bottom:16px;">ठ</div>
       <h1 style="font-size:24px;margin:0 0 4px;">${escapeHtml(pkg.name)}</h1>
       <p style="color:var(--muted);margin:0 0 20px;">${client?("For "+escapeHtml(client.name)+" · "):""}${BRAND} Ops</p>
@@ -1466,7 +1503,7 @@ function renderPackageLandingPage(pkgId, forClientId){
           <a class="btn secondary small" style="flex:1;text-align:center;text-decoration:none;box-sizing:border-box;" href="mailto:irfan@thikaana.co?subject=${encodeURIComponent("Interested in "+pkg.name)}">Connect with Irfan</a>
         </div>
       </div>
-      <p style="font-size:11.5px;color:var(--muted);margin-top:16px;">You can close this tab and return to your account anytime.</p>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:16px;">Use the link above, or just close this tab, to return to your account anytime.</p>
     </div>
   `;
   animateIn("#package-landing");
