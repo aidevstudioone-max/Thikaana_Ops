@@ -234,7 +234,10 @@
 <div id="app">
   <div class="shell">
     <div class="sidebar" id="sidebar"></div>
-    <div class="main" id="main-content"></div>
+    <div class="main">
+      <div id="global-back-bar" style="display:none;"><span class="back-link" onclick="history.back()">&larr; Back</span></div>
+      <div id="main-content"></div>
+    </div>
   </div>
 </div>
 
@@ -594,6 +597,9 @@ function render(){
   const map = s.type==="employee" ? empRenderers : clientRenderers;
   (map[currentTab]||map[Object.keys(map)[0]])();
   animateIn("#main-content");
+  const homeTab = s.type==="employee" ? "dashboard" : "cdashboard";
+  const backBar = document.getElementById("global-back-bar");
+  if(backBar) backBar.style.display = (currentTab===homeTab) ? "none" : "block";
 }
 function prefersReducedMotion(){ return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
 function animateIn(sel){
@@ -830,7 +836,6 @@ function renderClientProfile(id){
   }
 
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="profile-header">
       <div>
         <h2 style="margin:0 0 4px;">${escapeHtml(c.name)}</h2>
@@ -897,13 +902,13 @@ function renderTickets(){
     </div>
   `;
 }
-function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); animateIn("#main-content"); pushHistoryState(); }
+function openTicketDetail(id, backTo){ currentTicketId = id; currentClientTicketsBack = backTo || "tickets"; currentTab = currentClientTicketsBack; document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.tab===currentClientTicketsBack)); renderTicketDetailEmployee(id); animateIn("#main-content"); document.getElementById("global-back-bar").style.display = "block"; pushHistoryState(); }
 function renderTicketDetailEmployee(id){
   const tickets = loadKey("tickets")||[], clients = loadKey("clients")||[];
   const t = tickets.find(x=>x.id===id);
   const client = clients.find(c=>c.id===t.clientId);
+  document.getElementById("global-back-bar").style.display = "block";
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="topbar">
       <div><h2>${escapeHtml(t.subject)}</h2><p class="mono">${t.id} · ${client?escapeHtml(client.name):"—"} · opened ${fmtDateTime(t.createdAt)}</p></div>
       <div style="display:flex;gap:8px;"><span class="pill ${priorityPill(t.priority)}">${t.priority}</span><span class="pill ${statusPill(t.status)}">${t.status}</span></div>
@@ -1282,7 +1287,6 @@ function openClientTicketDetail(id){ currentTicketId = id; currentTab = "creques
 function renderClientTicketDetail(id){
   const t = (loadKey("tickets")||[]).find(x=>x.id===id);
   document.getElementById("main-content").innerHTML = `
-    <span class="back-link" onclick="history.back()">&larr; Back</span>
     <div class="topbar"><div><h2>${escapeHtml(t.subject)}</h2><p class="mono">${t.id} · opened ${fmtDateTime(t.createdAt)}</p></div><div style="display:flex;gap:8px;"><span class="pill ${priorityPill(t.priority)}">${t.priority}</span><span class="pill ${statusPill(t.status)}">${t.status}</span></div></div>
     <div class="two-col">
       <div>
